@@ -13,6 +13,7 @@ def test_work_table_entry():
     assert entry.band_end_frequency == 0.0
     assert entry.original_channel_index == 0
     assert entry.original_interval_index == 0
+    assert entry.mask_channel_index == 0
 
     # Update defaults
     entry.image_weight = 1.25
@@ -20,6 +21,7 @@ def test_work_table_entry():
     entry.band_end_frequency = 60.0e6
     entry.original_channel_index = 2
     entry.original_interval_index = 1
+    entry.mask_channel_index = 42
 
     # Check updated values
     assert entry.image_weight == 1.25
@@ -28,6 +30,7 @@ def test_work_table_entry():
     assert entry.band_end_frequency == 60.0e6
     assert entry.original_channel_index == 2
     assert entry.original_interval_index == 1
+    assert entry.mask_channel_index == 42
 
 
 def test_zero_groups():

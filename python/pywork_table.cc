@@ -188,6 +188,8 @@ void init_work_table(py::module& m) {
                      &radler::WorkTableEntry::original_channel_index)
       .def_readwrite("original_interval_index",
                      &radler::WorkTableEntry::original_interval_index)
+      .def_readwrite("mask_channel_index",
+                     &radler::WorkTableEntry::mask_channel_index)
       .def_readwrite("image_weight", &radler::WorkTableEntry::image_weight)
       // Since the vector contains a std::unique_ptr it's not possible to
       // use the default PyBind11 bindings. Instead a reference needs to be
