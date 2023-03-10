@@ -378,8 +378,13 @@ void Radler::ReadForcedSpectrumImages() {
   if (reader.ImageWidth() != image_width_ ||
       reader.ImageHeight() != image_height_) {
     throw std::runtime_error(
-        "The image width of the forced spectrum fits file does not match the "
-        "imaging size");
+        "The image dimensions of the forced spectrum fits file do not match "
+        "the deconvolved image dimensions");
+  }
+  if (reader.NImages() + 1 != settings_.spectral_fitting.terms) {
+    throw std::runtime_error(
+        "The number of images in the forced spectrum fits file does not match "
+        "the deconvolved image dimensions");
   }
   std::vector<Image> terms(reader.NImages());
   for (size_t spectral_term = 0; spectral_term != reader.NImages();

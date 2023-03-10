@@ -81,9 +81,9 @@ void ComponentList::Write(const std::string& filename,
   switch (fitter.Mode()) {
     case schaapcommon::fitters::SpectralFittingMode::kNoFitting:
     case schaapcommon::fitters::SpectralFittingMode::kPolynomial:
-    case schaapcommon::fitters::SpectralFittingMode::kForcedTerms:
       use_log_si = false;
       break;
+    case schaapcommon::fitters::SpectralFittingMode::kForcedTerms:
     case schaapcommon::fitters::SpectralFittingMode::kLogPolynomial:
       use_log_si = true;
       break;
