@@ -181,8 +181,8 @@ void ParallelDeconvolution::RunSubImage(
     // Because the model of this subimage might extend outside of its boundaries
     // (because of multiscale components), the model is placed back on the image
     // by adding its values. This requires that values outside the boundary are
-    // set to zero at this point, otherwise multiple subimages could add the
-    // same sources.
+    // set to zero at this point (before continuing deconvolution), otherwise
+    // multiple subimages could add the same sources.
     sub_model = model_image.TrimMasked(
         sub_image.x, sub_image.y, sub_image.x + sub_image.width,
         sub_image.y + sub_image.height, width, sub_image.boundary_mask.data());

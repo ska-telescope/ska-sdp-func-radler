@@ -12,12 +12,6 @@ class DijkstraSplitter {
   DijkstraSplitter(std::size_t width, std::size_t height)
       : width_(width), height_(height) {}
 
-  // TODO(AST-912) Make copy/move operations Google Style compliant.
-  DijkstraSplitter(const DijkstraSplitter&) = default;
-  DijkstraSplitter(DijkstraSplitter&&) = default;
-  DijkstraSplitter& operator=(const DijkstraSplitter&) = delete;
-  DijkstraSplitter& operator=(DijkstraSplitter&&) = delete;
-
   struct Coord {
     Coord() = default;
     Coord(std::size_t _x, std::size_t _y) : x(_x), y(_y) {}
@@ -86,7 +80,10 @@ class DijkstraSplitter {
    * @param vertical_mask_width Width return by FloodHorizontalArea(), and width
    * of vertical_mask.
    * @param horizontal_mask Mask returned by FloodVerticalArea().
-   * @param [in,out] mask Result
+   * @param [out] mask Resulting mask of combining the vertical and horizontal
+   * masks. The input should have the size of the full image. All values inside
+   * the bounding box are set to their proper value. Some values outside the
+   * bounding box might also be changed.
    * @param [out] sub_x Bounding box x-value
    * @param [out] sub_y Bounding box y-value
    * @param [out] subwidth Bounding box width
@@ -106,8 +103,8 @@ class DijkstraSplitter {
   void FillColumns(float* output, std::size_t x_start, std::size_t x_end,
                    float new_value) const;
 
-  const std::size_t width_;
-  const std::size_t height_;
+  std::size_t width_;
+  std::size_t height_;
 };
 }  // namespace radler::math
 #endif

@@ -226,6 +226,10 @@ void DijkstraSplitter::GetBoundingMask(const bool* vertical_mask,
   sub_y = height_;
   std::size_t sub_x2 = 0;
   std::size_t sub_y2 = 0;
+  // The reason why values outside the bounding box are changed (see function
+  // doc) is that we search for the bounding box (over the entire height of the
+  // image) and update the mask at the same time. This could be changed by
+  // separating this in two loops, but it's not required by the caller.
   for (std::size_t y = 0; y != height_; ++y) {
     const bool* vertical_mask_row = &vertical_mask[y * vertical_mask_width];
     const bool* horizontal_mask_row = &horizontal_mask[y * width_];
@@ -237,7 +241,7 @@ void DijkstraSplitter::GetBoundingMask(const bool* vertical_mask,
         sub_x = std::min(hx, sub_x);
         sub_y = std::min(y, sub_y);
         sub_x2 = std::max(hx, sub_x2);
-        sub_y2 = std::max(y, sub_y2);
+        sub_y2 = y;  // y increases monotonically, so y >= sub_y2
       } else {
         mask_row[hx] = false;
       }
@@ -254,13 +258,28 @@ void DijkstraSplitter::GetBoundingMask(const bool* vertical_mask,
   if (width_ % 2 == 0) {
     if (subwidth % 2 != 0) {
       ++subwidth;
-      if (subwidth + sub_x >= width_) --sub_x;
+      if (subwidth + sub_x >= width_) {
+        --sub_x;
+        for (size_t y = sub_y; y != sub_y + subheight; ++y) {
+          mask[sub_x + y * width_] = false;
+        }
+      } else {
+        for (size_t y = sub_y; y != sub_y + subheight; ++y) {
+          mask[sub_x + subwidth - 1 + y * width_] = false;
+        }
+      }
     }
   }
   if (height_ % 2 == 0) {
     if (subheight % 2 != 0) {
       ++subheight;
-      if (subheight + sub_y >= height_) --sub_y;
+      if (subheight + sub_y >= height_) {
+        --sub_y;
+        std::fill_n(&mask[sub_y * width_ + sub_x], subwidth, false);
+      } else {
+        std::fill_n(&mask[(sub_y + subheight - 1) * width_ + sub_x], subwidth,
+                    false);
+      }
     }
   }
 }
