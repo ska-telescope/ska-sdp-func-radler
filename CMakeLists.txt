@@ -43,6 +43,10 @@ add_compile_options(
   -Wextra
   -Wno-unused-parameter)
 
+if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
+  add_compile_options(-DNDEBUG)
+endif()
+
 include(CheckCXXCompilerFlag)
 if(PORTABLE)
   if(DEFINED TARGET_CPU)
