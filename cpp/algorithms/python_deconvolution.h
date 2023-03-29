@@ -13,6 +13,7 @@
 namespace pybind11 {
 // Forward declarations to keep pybind11 symbols internal.
 class scoped_interpreter;
+class gil_scoped_release;
 class function;
 }  // namespace pybind11
 
@@ -44,6 +45,11 @@ class PythonDeconvolution final : public DeconvolutionAlgorithm {
   // needs to live for the entire run
   std::shared_ptr<pybind11::scoped_interpreter> _guard;
   std::unique_ptr<pybind11::function> _deconvolveFunction;
+
+  // gil_scoped_release needs to be the last of the python members.
+  // This ensures that the GIL is obtained by the destructor before
+  // the python objects are destructed.
+  std::unique_ptr<pybind11::gil_scoped_release> release_;
 
   void setBuffer(const ImageSet& imageSet, double* pyPtr);
   void setPsf(const std::vector<aocommon::Image>& psfs, double* pyPtr,

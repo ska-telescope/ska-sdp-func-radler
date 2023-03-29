@@ -116,48 +116,55 @@ struct PyMetaData {
 
 PythonDeconvolution::PythonDeconvolution(const std::string& filename)
     : _filename(filename), _guard(new pybind11::scoped_interpreter()) {
-  pybind11::module main = pybind11::module::import("__main__");
-  pybind11::object scope = main.attr("__dict__");
-  try {
-    pybind11::eval_file(_filename, scope);
-    _deconvolveFunction = std::make_unique<pybind11::function>(
-        main.attr("deconvolve").cast<pybind11::function>());
-  } catch (pybind11::error_already_set& e) {
-    // If python throws an exception, the exception will contain references to
-    // Python objects. This object can't leave the scope, because they would
-    // be destructed, causing a segmentation fault. We therefore catch the
-    // exception at this point and rethrow it as a common runtime_error.
-    const std::string what = e.what();
-    throw std::runtime_error(what);
+  // enclose local python variables in a block
+  // such that they are already out of scope when the GIL is released
+  {
+    pybind11::module main = pybind11::module::import("__main__");
+    pybind11::object scope = main.attr("__dict__");
+    try {
+      pybind11::eval_file(_filename, scope);
+      _deconvolveFunction = std::make_unique<pybind11::function>(
+          main.attr("deconvolve").cast<pybind11::function>());
+    } catch (pybind11::error_already_set& e) {
+      // If python throws an exception, the exception will contain references to
+      // Python objects. This object can't leave the scope, because they would
+      // be destructed, causing a segmentation fault. We therefore catch the
+      // exception at this point and rethrow it as a common runtime_error.
+      const std::string what = e.what();
+      throw std::runtime_error(what);
+    }
+
+    pybind11::class_<PyChannel>(main, "Channel")
+        .def_readwrite("frequency", &PyChannel::frequency)
+        .def_readwrite("weight", &PyChannel::weight);
+
+    pybind11::class_<PyMetaData>(main, "MetaData")
+        .def_readonly("channels", &PyMetaData::channels)
+        .def_readonly("final_threshold", &PyMetaData::final_threshold)
+        .def_readwrite("iteration_number", &PyMetaData::iteration_number)
+        .def_readonly("gain", &PyMetaData::gain)
+        .def_readonly("max_iterations", &PyMetaData::max_iterations)
+        .def_readonly("major_iter_threshold", &PyMetaData::major_iter_threshold)
+        .def_readonly("mgain", &PyMetaData::mgain)
+        .def_readonly("spectral_fitter", &PyMetaData::spectral_fitter)
+        .def_readonly("square_joined_channels",
+                      &PyMetaData::square_joined_channels);
+
+    pybind11::class_<PySpectralFitter>(main, "SpectralFitter")
+        .def("fit", &PySpectralFitter::fit)
+        .def("fit_and_evaluate", &PySpectralFitter::fit_and_evaluate);
   }
-
-  pybind11::class_<PyChannel>(main, "Channel")
-      .def_readwrite("frequency", &PyChannel::frequency)
-      .def_readwrite("weight", &PyChannel::weight);
-
-  pybind11::class_<PyMetaData>(main, "MetaData")
-      .def_readonly("channels", &PyMetaData::channels)
-      .def_readonly("final_threshold", &PyMetaData::final_threshold)
-      .def_readwrite("iteration_number", &PyMetaData::iteration_number)
-      .def_readonly("gain", &PyMetaData::gain)
-      .def_readonly("max_iterations", &PyMetaData::max_iterations)
-      .def_readonly("major_iter_threshold", &PyMetaData::major_iter_threshold)
-      .def_readonly("mgain", &PyMetaData::mgain)
-      .def_readonly("spectral_fitter", &PyMetaData::spectral_fitter)
-      .def_readonly("square_joined_channels",
-                    &PyMetaData::square_joined_channels);
-
-  pybind11::class_<PySpectralFitter>(main, "SpectralFitter")
-      .def("fit", &PySpectralFitter::fit)
-      .def("fit_and_evaluate", &PySpectralFitter::fit_and_evaluate);
+  release_ = std::make_unique<pybind11::gil_scoped_release>();
 }
 
 PythonDeconvolution::PythonDeconvolution(const PythonDeconvolution& other)
     : DeconvolutionAlgorithm(other),
       _filename(other._filename),
-      _guard(other._guard),
-      _deconvolveFunction(
-          std::make_unique<pybind11::function>(*other._deconvolveFunction)) {}
+      _guard(other._guard) {
+  pybind11::gil_scoped_acquire acquire;
+  _deconvolveFunction =
+      std::make_unique<pybind11::function>(*other._deconvolveFunction);
+}
 
 PythonDeconvolution::~PythonDeconvolution() = default;
 
@@ -214,8 +221,7 @@ float PythonDeconvolution::ExecuteMajorIteration(
   size_t nFreq = dirty_set.NDeconvolutionChannels();
   size_t nPol = dirty_set.Size() / dirty_set.NDeconvolutionChannels();
 
-  static std::mutex mutex;
-  const std::lock_guard<std::mutex> lock(mutex);
+  pybind11::gil_scoped_acquire acquire_gil;
 
   pybind11::object result;
 
@@ -311,6 +317,7 @@ float PythonDeconvolution::ExecuteMajorIteration(
 
   double level = resultDict["level"].cast<double>();
   reached_major_threshold = resultDict["continue"].cast<bool>();
+
   return level;
 }
 }  // namespace radler::algorithms
