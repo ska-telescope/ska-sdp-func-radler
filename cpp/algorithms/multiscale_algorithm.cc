@@ -687,14 +687,19 @@ void MultiScaleAlgorithm::FindPeakDirect(const aocommon::Image& image,
         image.Height(), CleanMask(), horBorderSize, vertBorderSize);
   }
 
-  scaleInfo.max_unnormalized_image_value = maxValue.value_or(0.0);
-  if (RmsFactorImage().Empty()) {
-    scaleInfo.max_normalized_image_value = maxValue.value_or(0.0);
+  if (maxValue) {
+    scaleInfo.max_unnormalized_image_value = *maxValue;
+    if (RmsFactorImage().Empty()) {
+      scaleInfo.max_normalized_image_value = *maxValue;
+    } else {
+      scaleInfo.max_normalized_image_value =
+          (*maxValue) /
+          RmsFactorImage()[scaleInfo.max_image_value_x +
+                           scaleInfo.max_image_value_y * image.Width()];
+    }
   } else {
-    scaleInfo.max_normalized_image_value =
-        maxValue.value_or(0.0) /
-        RmsFactorImage()[scaleInfo.max_image_value_x +
-                         scaleInfo.max_image_value_y * image.Width()];
+    scaleInfo.max_unnormalized_image_value = 0.0;
+    scaleInfo.max_normalized_image_value = 0.0;
   }
 }
 
