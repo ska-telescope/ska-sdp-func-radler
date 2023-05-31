@@ -34,6 +34,7 @@ set(RADLER_FILES
     math/peak_finder.cc
     math/rms_image.cc
     utils/casa_mask_reader.cc
+    utils/compressed_mask.cc
     work_table.cc)
 
 # A number of files perform the 'core' high-performance floating point
