@@ -169,6 +169,36 @@ BOOST_AUTO_TEST_CASE(set_box_with_first_value) {
   }
 }
 
+BOOST_AUTO_TEST_CASE(set_box_with_specific_branch) {
+  // This tests in the final 'if' in SetBox the branch where read_value ==
+  // current_value It tests a specific bug that the other tests didn't unveil.
+  CompressedMask mask(5, 10);
+  std::array<bool, 50> expected;
+  std::fill(expected.begin(), expected.end(), false);
+
+  const bool pixel_value = true;
+  mask.SetBox(&pixel_value, 2, 7, 1, 1);
+  const size_t changed_pixel = 2 + 7 * 5;
+  expected[changed_pixel] = true;
+
+  std::array<bool, 50> result;
+  mask.Get(result.data());
+  BOOST_CHECK_EQUAL_COLLECTIONS(expected.begin(), expected.end(),
+                                result.begin(), result.end());
+
+  for (bool value : {false, true, true, false}) {
+    std::array<bool, 25> input;
+    std::fill(input.begin(), input.end(), value);
+    mask.SetBox(input.data(), 0, 1, 5, 5);
+    std::fill_n(expected.begin() + 5, 25, value);
+    BOOST_CHECK_EQUAL(mask.SumCount(), mask.Width() * mask.Height());
+    mask.Get(result.data());
+
+    BOOST_CHECK_EQUAL_COLLECTIONS(expected.begin(), expected.end(),
+                                  result.begin(), result.end());
+  }
+}
+
 BOOST_AUTO_TEST_CASE(set_box_full) {
   CompressedMask mask(3, 3);
   std::array<bool, 9> input;

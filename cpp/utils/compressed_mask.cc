@@ -167,6 +167,7 @@ void CompressedMask::SetBox(const bool* source, size_t x, size_t y,
     write_count = 0;
     current_value = !current_value;
     if (remaining) {
+      read_count = GetCount(read_iterator);
       write_count = new_mask.PushBackCompressedSequence(
           remaining, *this, read_iterator, read_count, read_value);
     }
