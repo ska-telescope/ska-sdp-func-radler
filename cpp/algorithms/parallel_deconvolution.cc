@@ -243,9 +243,8 @@ void ParallelDeconvolution::RunSubImage(
             multi_scale_algorithm.GetScaleMask(i);
         scale_mask.assign(sub_image.width * sub_image.height, false);
         if (i < scale_masks_.size()) {
-          Image::TrimBox(scale_mask.data(), sub_image.x, sub_image.y,
-                         sub_image.width, sub_image.height,
-                         scale_masks_[i].data(), width, height);
+          scale_masks_[i].GetBox(scale_mask.data(), sub_image.x, sub_image.y,
+                                 sub_image.width, sub_image.height);
           // If the scale-independent mask is set, we'll have to take the
           // intersection between that mask and the scale mask. Values in the
           // scale dependent mask may be true values that fall outside the
@@ -271,18 +270,37 @@ void ParallelDeconvolution::RunSubImage(
     MultiScaleAlgorithm& multi_scale_algorithm =
         static_cast<class MultiScaleAlgorithm&>(*algorithms_[sub_image.index]);
     if (scale_masks_.empty()) {
-      scale_masks_.resize(multi_scale_algorithm.ScaleCount());
-      for (aocommon::UVector<bool>& scaleMask : scale_masks_) {
-        scaleMask.assign(width * height, false);
+      scale_masks_.reserve(multi_scale_algorithm.ScaleCount());
+      for (size_t i = 0; i != multi_scale_algorithm.ScaleCount(); ++i) {
+        scale_masks_.emplace_back(width, height);
       }
     }
-    for (size_t i = 0; i != multi_scale_algorithm.ScaleCount(); ++i) {
-      const aocommon::UVector<bool>& msMask =
-          multi_scale_algorithm.GetScaleMask(i);
-      if (i < scale_masks_.size()) {
-        Image::CopyMasked(scale_masks_[i].data(), sub_image.x, sub_image.y,
-                          width, msMask.data(), sub_image.width,
-                          sub_image.height, sub_image.boundary_mask.data());
+    Logger::Debug << "Compressing scale dependent masks...\n";
+    for (size_t scale_index = 0;
+         scale_index != multi_scale_algorithm.ScaleCount(); ++scale_index) {
+      const aocommon::UVector<bool>& ms_mask =
+          multi_scale_algorithm.GetScaleMask(scale_index);
+      if (scale_index < scale_masks_.size()) {
+        aocommon::UVector<bool> combined_mask(sub_image.width *
+                                              sub_image.height);
+        scale_masks_[scale_index].GetBox(combined_mask.data(), sub_image.x,
+                                         sub_image.y, sub_image.width,
+                                         sub_image.height);
+        for (size_t pixel = 0; pixel != combined_mask.size(); ++pixel) {
+          if (sub_image.boundary_mask[pixel]) {
+            combined_mask[pixel] = ms_mask[pixel];
+          }
+        }
+        scale_masks_[scale_index].SetBox(combined_mask.data(), sub_image.x,
+                                         sub_image.y, sub_image.width,
+                                         sub_image.height);
+        std::stringstream compression_rate;
+        compression_rate << std::fixed << std::setprecision(1)
+                         << width * height /
+                                scale_masks_[scale_index].CompressedSize();
+        Logger::Debug << std::fixed << std::setprecision(1);
+        Logger::Debug << "Compression rate of scale mask " << scale_index
+                      << ": " << compression_rate.str() << "x\n";
       }
     }
   }
@@ -316,41 +334,50 @@ void ParallelDeconvolution::ExecuteMajorIteration(
     const std::vector<std::vector<aocommon::Image>>& psf_images,
     const std::vector<PsfOffset>& psf_offsets, bool& reached_major_threshold) {
   if (algorithms_.size() == 1) {
-    // The index of the nearest direction-dependent PSF, or the first when no
-    // direction-dependent PSFs are used.
-    const size_t psf_image_index = NearestPsfIndex(
-        psf_offsets, model_image.Width() / 2, model_image.Height() / 2);
-
-    aocommon::ForwardingLogReceiver fwdReceiver;
-    algorithms_.front()->SetLogReceiver(fwdReceiver);
-
-    // When using direction-dependent PSFs, the PSFs may have a different size.
-    // All PSF images for a psf_image_index should have equal sizes.
-    const aocommon::Image& first_psf_image =
-        psf_images[psf_image_index].front();
-    const bool resize_psfs = first_psf_image.Width() != data_image.Width() ||
-                             first_psf_image.Height() != data_image.Height();
-
-    if (!resize_psfs) {
-      algorithms_.front()->ExecuteMajorIteration(data_image, model_image,
-                                                 psf_images[psf_image_index],
-                                                 reached_major_threshold);
-    } else {
-      // When using direction-dependent PSFs, the PSFs can only be smaller.
-      assert(first_psf_image.Width() <= data_image.Width());
-      assert(first_psf_image.Height() <= data_image.Height());
-      std::vector<aocommon::Image> resized_psf_images;
-      resized_psf_images.reserve(psf_images[psf_image_index].size());
-      for (const aocommon::Image& psf_image : psf_images[psf_image_index]) {
-        resized_psf_images.push_back(
-            psf_image.Untrim(data_image.Width(), data_image.Height()));
-      }
-      algorithms_.front()->ExecuteMajorIteration(
-          data_image, model_image, resized_psf_images, reached_major_threshold);
-    }
+    ExecuteSingleThreadedRun(data_image, model_image, psf_images, psf_offsets,
+                             reached_major_threshold);
   } else {
     ExecuteParallelRun(data_image, model_image, psf_images, psf_offsets,
                        reached_major_threshold);
+  }
+}
+
+void ParallelDeconvolution::ExecuteSingleThreadedRun(
+    ImageSet& data_image, ImageSet& model_image,
+    const std::vector<std::vector<aocommon::Image>>& psf_images,
+    const std::vector<PsfOffset>& psf_offsets, bool& reached_major_threshold) {
+  DeconvolutionAlgorithm& algorithm = *algorithms_.front();
+
+  // The index of the nearest direction-dependent PSF, or the first when no
+  // direction-dependent PSFs are used.
+  const size_t psf_image_index = NearestPsfIndex(
+      psf_offsets, model_image.Width() / 2, model_image.Height() / 2);
+
+  aocommon::ForwardingLogReceiver fwdReceiver;
+  algorithm.SetLogReceiver(fwdReceiver);
+
+  // When using direction-dependent PSFs, the PSFs may have a different size.
+  // All PSF images for a psf_image_index should have equal sizes.
+  const aocommon::Image& first_psf_image = psf_images[psf_image_index].front();
+  const bool resize_psfs = first_psf_image.Width() != data_image.Width() ||
+                           first_psf_image.Height() != data_image.Height();
+
+  if (!resize_psfs) {
+    algorithm.ExecuteMajorIteration(data_image, model_image,
+                                    psf_images[psf_image_index],
+                                    reached_major_threshold);
+  } else {
+    // When using direction-dependent PSFs, the PSFs can only be smaller.
+    assert(first_psf_image.Width() <= data_image.Width());
+    assert(first_psf_image.Height() <= data_image.Height());
+    std::vector<aocommon::Image> resized_psf_images;
+    resized_psf_images.reserve(psf_images[psf_image_index].size());
+    for (const aocommon::Image& psf_image : psf_images[psf_image_index]) {
+      resized_psf_images.push_back(
+          psf_image.Untrim(data_image.Width(), data_image.Height()));
+    }
+    algorithm.ExecuteMajorIteration(data_image, model_image, resized_psf_images,
+                                    reached_major_threshold);
   }
 }
 

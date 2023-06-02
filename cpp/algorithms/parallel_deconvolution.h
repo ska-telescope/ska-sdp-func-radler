@@ -15,6 +15,7 @@
 #include "settings.h"
 #include "algorithms/deconvolution_algorithm.h"
 #include "logging/subimage_logset.h"
+#include "utils/compressed_mask.h"
 
 namespace radler::algorithms {
 
@@ -76,6 +77,11 @@ class ParallelDeconvolution {
       const std::vector<std::vector<aocommon::Image>>& psf_images,
       const std::vector<PsfOffset>& psf_offsets, bool& reached_major_threshold);
 
+  void ExecuteSingleThreadedRun(
+      ImageSet& data_image, ImageSet& model_image,
+      const std::vector<std::vector<aocommon::Image>>& psf_images,
+      const std::vector<PsfOffset>& psf_offsets, bool& reached_major_threshold);
+
   struct SubImage {
     size_t index;
     size_t x;
@@ -106,7 +112,7 @@ class ParallelDeconvolution {
   std::vector<aocommon::Image> spectrally_forced_images_;
   bool track_per_scale_masks_;
   bool use_per_scale_masks_;
-  std::vector<aocommon::UVector<bool>> scale_masks_;
+  std::vector<utils::CompressedMask> scale_masks_;
   std::unique_ptr<class ComponentList> component_list_;
   aocommon::Image rms_image_;
 };

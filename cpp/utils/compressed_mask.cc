@@ -174,6 +174,7 @@ void CompressedMask::SetBox(const bool* source, size_t x, size_t y,
   }
   if (write_count) new_mask.PushBackCount(write_count);
   CompressedMaskData::operator=(std::move(new_mask));
+  assert(SumCount() == width_ * height_);
 }
 
 }  // namespace radler::utils
