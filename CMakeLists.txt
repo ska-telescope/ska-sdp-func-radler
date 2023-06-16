@@ -131,6 +131,16 @@ find_package(
 # Threads
 find_package(Threads REQUIRED)
 
+# GSL
+find_library(GSL_LIB NAMES gsl)
+find_path(GSL_INCLUDE_DIR NAMES gsl/gsl_version.h)
+find_library(GSL_CBLAS_LIB NAMES gslcblas)
+if(NOT GSL_LIB
+   OR NOT GSL_INCLUDE_DIR
+   OR NOT GSL_CBLAS_LIB)
+  message(FATAL_ERROR "GSL not found, but required to build Radler!")
+endif()
+
 # Find and include HDF5
 find_package(
   HDF5
@@ -188,6 +198,7 @@ set(RADLER_TARGET_INCLUDE_DIRS
     ${Boost_INCLUDE_DIRS}
     ${CASACORE_INCLUDE_DIRS}
     ${CFITSIO_INCLUDE_DIR}
+    ${GSL_INCLUDE_DIR}
     ${HDF5_INCLUDE_DIRS}
     ${pybind11_INCLUDE_DIRS}
     ${SCHAAPCOMMON_SOURCE_DIR}/include)
