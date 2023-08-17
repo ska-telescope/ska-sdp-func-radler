@@ -25,7 +25,7 @@ def test_layout():
     )
     assert nested_structs == nested_structs_ref
 
-    n_properties_ref = 33
+    n_properties_ref = 34
     properties = set(filter(lambda x: re.match("^[a-z]+", x), dir(settings)))
     assert len(properties) == n_properties_ref
 
@@ -45,7 +45,7 @@ def test_default():
     assert settings.parallel.grid_width == 1
     assert settings.parallel.grid_height == 1
     assert settings.parallel.max_threads > 0
-    assert settings.threshold == 0.0
+    assert settings.absolute_threshold == 0.0
     assert settings.minor_loop_gain == 0.1
     assert settings.major_loop_gain == 1.0
     assert settings.auto_threshold_sigma == None

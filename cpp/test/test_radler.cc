@@ -86,7 +86,7 @@ struct SettingsFixture {
     settings.pixel_scale.x = kPixelScale;
     settings.pixel_scale.y = kPixelScale;
     settings.minor_iteration_count = 1000;
-    settings.threshold = 1.0e-8;
+    settings.absolute_threshold = 1.0e-8;
   }
 
   Settings settings;
@@ -191,7 +191,7 @@ BOOST_AUTO_TEST_CASE(diffuse_source) {
 
   Settings settings;
   settings.algorithm_type = AlgorithmType::kMultiscale;
-  settings.threshold = 1.0e-8;
+  settings.absolute_threshold = 1.0e-8;
   settings.major_iteration_count = 30;
   settings.pixel_scale.x = imgReader.PixelSizeX();
   settings.pixel_scale.y = imgReader.PixelSizeY();
@@ -199,7 +199,7 @@ BOOST_AUTO_TEST_CASE(diffuse_source) {
   settings.trimmed_image_height = imgReader.ImageHeight();
   settings.minor_iteration_count = 300;
   settings.minor_loop_gain = 0.8;
-  settings.auto_mask_sigma = 4;
+  settings.auto_mask_sigma = 4.0;
 
   const double beamScale = imgReader.BeamMajorAxisRad();
 
@@ -209,18 +209,19 @@ BOOST_AUTO_TEST_CASE(diffuse_source) {
   const int major_iteration_count = 0;
   radler.Perform(reached_threshold, major_iteration_count);
 
-  BOOST_REQUIRE(radler.IterationNumber() <= settings.minor_iteration_count);
+  BOOST_CHECK_LE(radler.IterationNumber(), settings.minor_iteration_count);
+  BOOST_CHECK_GE(radler.IterationNumber(), 100);
 
   const double max_residual = residual_image.Max();
   const double rms_residual = residual_image.RMS();
 
   // Checks that RMS value in residual image went down at least by 25%. A
   // reduction is expected as we remove the peaks from the dirty image.
-  BOOST_REQUIRE(rms_residual < 0.75 * rms_dirty_image);
+  BOOST_CHECK_LT(rms_residual, 0.75 * rms_dirty_image);
 
   // Checks that the components in the dirty image are reduced in the first
-  // iteration. We expect thehighest peak to be reduced by 90% in this case.
-  BOOST_REQUIRE(max_residual < 0.1 * max_dirty_image);
+  // iteration. We expect the highest peak to be reduced by 90% in this case.
+  BOOST_CHECK_LT(max_residual, 0.1 * max_dirty_image);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

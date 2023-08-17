@@ -166,8 +166,8 @@ def test_add_entries_wrong_type():
     entries = [rd.WorkTableEntry(), rd.WorkTableEntry(), rd.WorkTableEntry()]
 
     psf = np.ones((4, 4), dtype=np.float64)
-    residual = np.ones((4, 4), dtype=np.int)
-    model = np.ones((4, 4), np.complex)
+    residual = np.ones((4, 4), dtype=int)
+    model = np.ones((4, 4), complex)
 
     with pytest.raises(TypeError):
         entries[0].psfs.append(psf)

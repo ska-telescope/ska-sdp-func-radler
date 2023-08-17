@@ -71,8 +71,9 @@ void init_settings(py::module& m) {
                      DOC(radler_Settings_linked_polarizations))
       .def_readwrite("parallel", &radler::Settings::parallel,
                      DOC(radler_Settings_parallel))
-      .def_readwrite("threshold", &radler::Settings::threshold,
-                     DOC(radler_Settings_threshold))
+      .def_readwrite("absolute_threshold",
+                     &radler::Settings::absolute_threshold,
+                     DOC(radler_Settings_absolute_threshold))
       .def_readwrite("minor_loop_gain", &radler::Settings::minor_loop_gain,
                      DOC(radler_Settings_minor_loop_gain))
       .def_readwrite("major_loop_gain", &radler::Settings::major_loop_gain,
@@ -82,6 +83,9 @@ void init_settings(py::module& m) {
                      DOC(radler_Settings_auto_threshold_sigma))
       .def_readwrite("auto_mask_sigma", &radler::Settings::auto_mask_sigma,
                      DOC(radler_Settings_auto_mask_sigma))
+      .def_readwrite("absolute_auto_mask_threshold",
+                     &radler::Settings::absolute_auto_mask_threshold,
+                     DOC(radler_Settings_absolute_auto_mask_threshold))
       .def_readwrite("save_source_list", &radler::Settings::save_source_list,
                      DOC(radler_Settings_save_source_list))
       .def_readwrite("minor_iteration_count",

@@ -205,6 +205,17 @@ static const char *__doc_radler_Settings_SpectralFitting_terms =
 R"doc(Number of spectral terms to constrain the channels to, or zero to
 disable.)doc";
 
+static const char *__doc_radler_Settings_absolute_auto_mask_threshold =
+R"doc(Like auto_mask_sigma, but instead specifies an absolute level where to
+stop generation of the auto-mask.)doc";
+
+static const char *__doc_radler_Settings_absolute_threshold =
+R"doc(Value in Jy that defines when to stop cleaning. Radler::Perform() will
+stop its major iteration and set ``reached_major_threshold``=false
+when the peak residual flux is below the given threshold. The default
+value is 0.0, which means that Radler will keep continuing until
+another criterion (e.g. nr. of iterations) is reached.)doc";
+
 static const char *__doc_radler_Settings_algorithm_type =
 R"doc(@{ These deconvolution settings are algorithm-specific. For each
 algorithm type, a single struct holds all algorithm-specific settings
@@ -356,13 +367,6 @@ R"doc(When set to ``True``, finding a negative component as the maximum
 set ``reached_major_threshold``=false.)doc";
 
 static const char *__doc_radler_Settings_thread_count = R"doc()doc";
-
-static const char *__doc_radler_Settings_threshold =
-R"doc(Value in Jy that defines when to stop cleaning. Radler::Perform() will
-stop its major iteration and set ``reached_major_threshold``=false
-when the peak residual flux is below the given threshold. The default
-value is 0.0, which means that Radler will keep continuing until
-another criterion (e.g. nr. of iterations) is reached.)doc";
 
 static const char *__doc_radler_Settings_trimmed_image_height = R"doc(Trimmed image height)doc";
 

@@ -150,7 +150,7 @@ struct Settings {
    * which means that Radler will keep continuing until another criterion (e.g.
    * nr. of iterations) is reached.
    */
-  double threshold = 0.0;
+  double absolute_threshold = 0.0;
 
   /**
    * Gain value for minor loop iterations.
@@ -197,6 +197,12 @@ struct Settings {
    * If unset, automatic masking is not used.
    */
   std::optional<double> auto_mask_sigma = std::nullopt;
+
+  /**
+   * @brief Like @ref auto_mask_sigma, but instead specifies an absolute
+   * level where to stop generation of the auto-mask.
+   */
+  std::optional<double> absolute_auto_mask_threshold;
 
   /**
    * If @c true, maintain a list of components while performing deconvolution.

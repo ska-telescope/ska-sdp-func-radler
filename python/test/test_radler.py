@@ -45,7 +45,7 @@ def get_settings():
     settings.pixel_scale.x = PIXEL_SCALE
     settings.pixel_scale.y = PIXEL_SCALE
     settings.minor_iteration_count = MINOR_ITERATION_COUNT
-    settings.threshold = 1e-8
+    settings.absolute_threshold = 1e-8
     return settings
 
 
@@ -126,7 +126,7 @@ def test_input_dtype(settings):
     residual = residual.astype(np.float32)
     rd.Radler(settings, psf, residual, model, BEAM_SIZE)
 
-    model = model.astype(np.int)
+    model = model.astype(int)
     with pytest.raises(TypeError):
         rd.Radler(settings, psf, residual, model, BEAM_SIZE)
     model = model.astype(np.float32)

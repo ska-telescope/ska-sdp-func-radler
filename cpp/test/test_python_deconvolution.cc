@@ -32,7 +32,7 @@ class PythonFileFixture {
     settings.pixel_scale.x = kPixelScale;
     settings.pixel_scale.y = kPixelScale;
     settings.minor_iteration_count = 1000;
-    settings.threshold = 1.0e-8;
+    settings.absolute_threshold = 1.0e-8;
     settings.algorithm_type = AlgorithmType::kPython;
     settings.python.filename = kPythonFilename;
   }
