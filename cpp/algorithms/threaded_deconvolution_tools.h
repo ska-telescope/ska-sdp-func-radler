@@ -18,26 +18,21 @@ namespace radler::algorithms {
 
 class ThreadedDeconvolutionTools {
  public:
-  explicit ThreadedDeconvolutionTools(size_t threadCount);
-  ~ThreadedDeconvolutionTools();
-
-  ThreadedDeconvolutionTools(const ThreadedDeconvolutionTools&) = default;
-  ThreadedDeconvolutionTools(ThreadedDeconvolutionTools&&) = default;
-  ThreadedDeconvolutionTools& operator=(const ThreadedDeconvolutionTools&) =
-      default;
-  ThreadedDeconvolutionTools& operator=(ThreadedDeconvolutionTools&&) = default;
+  explicit ThreadedDeconvolutionTools(size_t thread_count);
 
   struct PeakData {
-    std::optional<float> normalizedValue, unnormalizedValue;
+    std::optional<float> normalized_value;
+    std::optional<float> unnormalized_value;
     float rms;
-    size_t x, y;
+    size_t x;
+    size_t y;
   };
 
   void SubtractImage(float* image, const aocommon::Image& psf, size_t x,
                      size_t y, float factor);
 
   void FindMultiScalePeak(
-      multiscale::MultiScaleTransforms* msTransforms,
+      multiscale::MultiScaleTransforms* ms_transforms,
       const aocommon::Image& image, const aocommon::UVector<float>& scales,
       std::vector<PeakData>& results, bool allowNegativeComponents,
       const bool* mask, const std::vector<aocommon::UVector<bool>>& scaleMasks,
@@ -51,54 +46,13 @@ class ThreadedDeconvolutionTools {
   }
 
  private:
-  struct ThreadResult {};
-  struct FindMultiScalePeakResult : public ThreadResult {
-    std::optional<float> unnormalizedValue, normalizedValue;
-    float rms;
-    size_t x, y;
-  };
+  ThreadedDeconvolutionTools::PeakData FindSingleScalePeak(
+      multiscale::MultiScaleTransforms* ms_transforms, aocommon::Image& image,
+      float scale, bool allow_negative_components, const bool* mask,
+      float border_ratio, const aocommon::Image& rms_factor_image,
+      bool calculate_rms);
 
-  struct ThreadTask {
-    virtual std::unique_ptr<ThreadResult> operator()() = 0;
-    virtual ~ThreadTask() {}
-  };
-  struct SubtractionTask : public ThreadTask {
-    virtual std::unique_ptr<ThreadResult> operator()();
-
-    float* image;
-    const aocommon::Image* psf;
-    size_t x, y;
-    float factor;
-    size_t startY, endY;
-  };
-
-  struct FindMultiScalePeakTask : public ThreadTask {
-    virtual std::unique_ptr<ThreadResult> operator()();
-
-    multiscale::MultiScaleTransforms* msTransforms;
-    aocommon::Image* image;
-    aocommon::Image* scratch;
-    float scale;
-    bool allowNegativeComponents;
-    const bool* mask;
-    float borderRatio;
-    bool calculateRMS;
-    const aocommon::Image* rmsFactorImage;
-  };
-
-  std::vector<aocommon::Lane<std::unique_ptr<ThreadTask>>> _taskLanes;
-  std::vector<aocommon::Lane<std::unique_ptr<ThreadResult>>> _resultLanes;
-  size_t _threadCount;
-  std::vector<std::thread> _threadGroup;
-
-  void threadFunc(aocommon::Lane<std::unique_ptr<ThreadTask>>* taskLane,
-                  aocommon::Lane<std::unique_ptr<ThreadResult>>* resultLane) {
-    std::unique_ptr<ThreadTask> task;
-    while (taskLane->read(task)) {
-      std::unique_ptr<ThreadResult> result = (*task)();
-      resultLane->write(std::move(result));
-    }
-  }
+  size_t thread_count_;
 };
 }  // namespace radler::algorithms
 #endif

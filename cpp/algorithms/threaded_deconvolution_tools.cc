@@ -5,6 +5,8 @@
 #include <memory>
 
 #include <aocommon/image.h>
+#include <aocommon/staticfor.h>
+#include <aocommon/parallelfor.h>
 
 #include "algorithms/simple_clean.h"
 #include "math/peak_finder.h"
@@ -13,187 +15,95 @@ using aocommon::Image;
 
 namespace radler::algorithms {
 
-ThreadedDeconvolutionTools::ThreadedDeconvolutionTools(size_t threadCount)
-    : _taskLanes(threadCount),
-      _resultLanes(threadCount),
-      _threadCount(threadCount) {
-  for (size_t i = 0; i != _threadCount; ++i) {
-    _taskLanes[i].resize(1);
-    _resultLanes[i].resize(1);
-    _threadGroup.emplace_back(&ThreadedDeconvolutionTools::threadFunc, this,
-                              &_taskLanes[i], &_resultLanes[i]);
-  }
-}
-
-ThreadedDeconvolutionTools::~ThreadedDeconvolutionTools() {
-  for (size_t i = 0; i != _threadCount; ++i) {
-    _taskLanes[i].write_end();
-  }
-
-  for (std::thread& t : _threadGroup) t.join();
-}
+ThreadedDeconvolutionTools::ThreadedDeconvolutionTools(size_t thread_count_)
+    : thread_count_(thread_count_) {}
 
 void ThreadedDeconvolutionTools::SubtractImage(float* image,
                                                const aocommon::Image& psf,
                                                size_t x, size_t y,
                                                float factor) {
-  for (size_t thr = 0; thr != _threadCount; ++thr) {
-    auto task = std::make_unique<SubtractionTask>();
-    task->image = image;
-    task->psf = &psf;
-    task->x = x;
-    task->y = y;
-    task->factor = factor;
-    task->startY = psf.Height() * thr / _threadCount;
-    task->endY = psf.Height() * (thr + 1) / _threadCount;
-    if (thr == _threadCount - 1) {
-      (*task)();
-    } else {
-      _taskLanes[thr].write(std::move(task));
-    }
-  }
-  for (size_t thr = 0; thr != _threadCount - 1; ++thr) {
-    std::unique_ptr<ThreadResult> result;
-    _resultLanes[thr].read(result);
-  }
-}
-
-std::unique_ptr<ThreadedDeconvolutionTools::ThreadResult>
-ThreadedDeconvolutionTools::SubtractionTask::operator()() {
-  simple_clean::PartialSubtractImage(image, psf->Data(), psf->Width(),
-                                     psf->Height(), x, y, factor, startY, endY);
-  return {};
+  aocommon::StaticFor<size_t> loop(thread_count_);
+  loop.Run(0, psf.Height(), [&](size_t start_y, size_t end_y) {
+    simple_clean::PartialSubtractImage(image, psf.Data(), psf.Width(),
+                                       psf.Height(), x, y, factor, start_y,
+                                       end_y);
+  });
 }
 
 void ThreadedDeconvolutionTools::FindMultiScalePeak(
-    multiscale::MultiScaleTransforms* msTransforms, const Image& image,
+    multiscale::MultiScaleTransforms* ms_transforms, const Image& image,
     const aocommon::UVector<float>& scales,
     std::vector<ThreadedDeconvolutionTools::PeakData>& results,
-    bool allowNegativeComponents, const bool* mask,
-    const std::vector<aocommon::UVector<bool>>& scaleMasks, float borderRatio,
-    const Image& rmsFactorImage, bool calculateRMS) {
-  size_t imageIndex = 0;
-  size_t nextThread = 0;
-  size_t resultIndex = 0;
+    bool allow_negative_components, const bool* mask,
+    const std::vector<aocommon::UVector<bool>>& scale_masks, float border_ratio,
+    const Image& rms_factor_image, bool calculate_rms) {
+  const size_t n_scales = scales.size();
+  results.resize(n_scales);
 
-  results.resize(scales.size());
-
-  size_t size = std::min(scales.size(), _threadCount);
-  std::vector<Image> imageData;
-  std::vector<Image> scratchData;
-  imageData.reserve(size);
-  scratchData.reserve(size);
-  for (size_t i = 0; i != size; ++i) {
-    imageData.emplace_back(msTransforms->Width(), msTransforms->Height());
-    scratchData.emplace_back(msTransforms->Width(), msTransforms->Height());
-  }
-
-  while (imageIndex < scales.size()) {
-    std::unique_ptr<FindMultiScalePeakTask> task(new FindMultiScalePeakTask());
-    task->msTransforms = msTransforms;
-    imageData[nextThread] = image;
-    task->image = &imageData[nextThread];
-    task->scratch = &scratchData[nextThread];
-    task->scale = scales[imageIndex];
-    task->allowNegativeComponents = allowNegativeComponents;
-    if (scaleMasks.empty()) {
-      task->mask = mask;
-    } else {
-      task->mask = scaleMasks[imageIndex].data();
-    }
-    task->borderRatio = borderRatio;
-    task->calculateRMS = calculateRMS;
-    task->rmsFactorImage = &rmsFactorImage;
-    _taskLanes[nextThread].write(std::move(task));
-
-    ++nextThread;
-    if (nextThread == _threadCount) {
-      for (size_t thr = 0; thr != nextThread; ++thr) {
-        std::unique_ptr<ThreadResult> result;
-        _resultLanes[thr].read(result);
-        results[resultIndex].normalizedValue =
-            static_cast<FindMultiScalePeakResult&>(*result).normalizedValue;
-        results[resultIndex].unnormalizedValue =
-            static_cast<FindMultiScalePeakResult&>(*result).unnormalizedValue;
-        results[resultIndex].x =
-            static_cast<FindMultiScalePeakResult&>(*result).x;
-        results[resultIndex].y =
-            static_cast<FindMultiScalePeakResult&>(*result).y;
-        results[resultIndex].rms =
-            static_cast<FindMultiScalePeakResult&>(*result).rms;
-        ++resultIndex;
-      }
-      nextThread = 0;
-    }
-    ++imageIndex;
-  }
-  for (size_t thr = 0; thr != nextThread; ++thr) {
-    std::unique_ptr<ThreadResult> result;
-    _resultLanes[thr].read(result);
-    results[resultIndex].unnormalizedValue =
-        static_cast<FindMultiScalePeakResult&>(*result).unnormalizedValue;
-    results[resultIndex].normalizedValue =
-        static_cast<FindMultiScalePeakResult&>(*result).normalizedValue;
-    results[resultIndex].x = static_cast<FindMultiScalePeakResult&>(*result).x;
-    results[resultIndex].y = static_cast<FindMultiScalePeakResult&>(*result).y;
-    results[resultIndex].rms =
-        static_cast<FindMultiScalePeakResult&>(*result).rms;
-    ++resultIndex;
-  }
+  aocommon::ParallelFor<size_t> loop(thread_count_);
+  loop.Run(0, n_scales, [&](size_t scale_index) {
+    Image image_copy(image);
+    const bool* selected_mask =
+        scale_masks.empty() ? mask : scale_masks[scale_index].data();
+    results[scale_index] =
+        FindSingleScalePeak(ms_transforms, image_copy, scales[scale_index],
+                            allow_negative_components, selected_mask,
+                            border_ratio, rms_factor_image, calculate_rms);
+  });
 }
 
-std::unique_ptr<ThreadedDeconvolutionTools::ThreadResult>
-ThreadedDeconvolutionTools::FindMultiScalePeakTask::operator()() {
-  msTransforms->Transform(*image, *scratch, scale);
-  const size_t width = msTransforms->Width();
-  const size_t height = msTransforms->Height();
-  const size_t scaleBorder = std::ceil(scale * 0.5);
-  const size_t horBorderSize =
-      std::max<size_t>(std::round(width * borderRatio), scaleBorder);
-  const size_t vertBorderSize =
-      std::max<size_t>(std::round(height * borderRatio), scaleBorder);
-  std::unique_ptr<FindMultiScalePeakResult> result(
-      new FindMultiScalePeakResult());
-  if (calculateRMS) {
-    result->rms = RMS(*image, width * height);
+ThreadedDeconvolutionTools::PeakData
+ThreadedDeconvolutionTools::FindSingleScalePeak(
+    multiscale::MultiScaleTransforms* ms_transforms, Image& image, float scale,
+    bool allow_negative_components, const bool* mask, float border_ratio,
+    const Image& rms_factor_image, bool calculate_rms) {
+  Image scratch(ms_transforms->Width(), ms_transforms->Height());
+  ms_transforms->Transform(image, scratch, scale);
+  const size_t width = ms_transforms->Width();
+  const size_t height = ms_transforms->Height();
+  const size_t border_scale = std::ceil(scale * 0.5);
+  const size_t x_border =
+      std::max<size_t>(std::round(width * border_ratio), border_scale);
+  const size_t y_border =
+      std::max<size_t>(std::round(height * border_ratio), border_scale);
+  PeakData result;
+  if (calculate_rms) {
+    result.rms = RMS(image, width * height);
   } else {
-    result->rms = -1.0;
+    result.rms = -1.0;
   }
-  if (rmsFactorImage->Empty()) {
+  if (rms_factor_image.Empty()) {
     if (mask == nullptr) {
-      result->unnormalizedValue = math::peak_finder::Find(
-          image->Data(), width, height, result->x, result->y,
-          allowNegativeComponents, 0, height, horBorderSize, vertBorderSize);
+      result.unnormalized_value = math::peak_finder::Find(
+          image.Data(), width, height, result.x, result.y,
+          allow_negative_components, 0, height, x_border, y_border);
     } else {
-      result->unnormalizedValue = math::peak_finder::FindWithMask(
-          image->Data(), width, height, result->x, result->y,
-          allowNegativeComponents, 0, height, mask, horBorderSize,
-          vertBorderSize);
+      result.unnormalized_value = math::peak_finder::FindWithMask(
+          image.Data(), width, height, result.x, result.y,
+          allow_negative_components, 0, height, mask, x_border, y_border);
     }
 
-    result->normalizedValue = result->unnormalizedValue;
+    result.normalized_value = result.unnormalized_value;
   } else {
-    for (size_t i = 0; i != rmsFactorImage->Size(); ++i) {
-      (*scratch)[i] = (*image)[i] * (*rmsFactorImage)[i];
+    for (size_t i = 0; i != rms_factor_image.Size(); ++i) {
+      scratch[i] = image[i] * rms_factor_image[i];
     }
 
     if (mask == nullptr) {
-      result->unnormalizedValue = math::peak_finder::Find(
-          scratch->Data(), width, height, result->x, result->y,
-          allowNegativeComponents, 0, height, horBorderSize, vertBorderSize);
+      result.unnormalized_value = math::peak_finder::Find(
+          scratch.Data(), width, height, result.x, result.y,
+          allow_negative_components, 0, height, x_border, y_border);
     } else {
-      result->unnormalizedValue = math::peak_finder::FindWithMask(
-          scratch->Data(), width, height, result->x, result->y,
-          allowNegativeComponents, 0, height, mask, horBorderSize,
-          vertBorderSize);
+      result.unnormalized_value = math::peak_finder::FindWithMask(
+          scratch.Data(), width, height, result.x, result.y,
+          allow_negative_components, 0, height, mask, x_border, y_border);
     }
 
-    if (result->unnormalizedValue) {
-      result->normalizedValue =
-          (*result->unnormalizedValue) /
-          (*rmsFactorImage)[result->x + result->y * width];
+    if (result.unnormalized_value) {
+      result.normalized_value = (*result.unnormalized_value) /
+                                rms_factor_image[result.x + result.y * width];
     } else {
-      result->normalizedValue.reset();
+      result.normalized_value.reset();
     }
   }
   return result;

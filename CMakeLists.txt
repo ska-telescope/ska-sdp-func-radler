@@ -168,7 +168,7 @@ else()
   add_subdirectory(${SCHAAPCOMMON_SOURCE_DIR})
   add_subdirectory(${PYBIND11_SOURCE_DIR})
 endif()
-target_include_directories(schaapcommon SYSTEM PUBLIC ${AOCOMMON_INCLUDE_DIR})
+target_include_directories(schaapcommon PUBLIC ${AOCOMMON_INCLUDE_DIR})
 
 # When building the python bindings, set the rpath to the install directory, so
 # that importing the python module doesn't require to set the LD_LIBRARY_PATH
