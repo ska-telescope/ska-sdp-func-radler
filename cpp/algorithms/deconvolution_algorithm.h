@@ -67,10 +67,6 @@ class DeconvolutionAlgorithm {
     settings_.clean_mask = clean_mask;
   }
 
-  void SetThreadCount(size_t thread_count) {
-    settings_.thread_count = thread_count;
-  }
-
   void SetLogReceiver(aocommon::LogReceiver& log_receiver) {
     log_receiver_ = &log_receiver;
   }
@@ -90,7 +86,6 @@ class DeconvolutionAlgorithm {
     return settings_.stop_on_negative_component;
   }
   const bool* CleanMask() const { return settings_.clean_mask; }
-  size_t ThreadCount() const { return settings_.thread_count; }
 
   size_t IterationNumber() const { return iteration_number_; }
 
@@ -147,7 +142,6 @@ class DeconvolutionAlgorithm {
     bool allow_negative_components = true;
     bool stop_on_negative_component = false;
     const bool* clean_mask = nullptr;
-    size_t thread_count = 0;
   } settings_;
 
   aocommon::LogReceiver* log_receiver_ = nullptr;

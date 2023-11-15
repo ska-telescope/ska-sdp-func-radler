@@ -5,7 +5,7 @@
 #include <algorithm>
 #include <memory>
 
-#include <aocommon/parallelfor.h>
+#include <aocommon/dynamicfor.h>
 #include <aocommon/units/fluxdensity.h>
 
 #include <schaapcommon/fft/convolution.h>
@@ -82,7 +82,6 @@ void ParallelDeconvolution::SetAlgorithm(
       std::min(settings_.parallel.max_threads, algorithms_.size());
   const size_t threads_per_alg =
       (settings_.thread_count + parallel_subimages - 1) / parallel_subimages;
-  algorithms_.front()->SetThreadCount(threads_per_alg);
   Logger::Debug << "Parallel deconvolution will use " << algorithms_.size()
                 << " subimages, each using " << threads_per_alg
                 << " threads.\n";
@@ -404,10 +403,10 @@ void ParallelDeconvolution::ExecuteParallelRun(
   std::vector<VerticalArea> verticalAreas(settings_.parallel.grid_width);
 
   Logger::Info << "Calculating edge paths...\n";
-  aocommon::ParallelFor<size_t> splitLoop(settings_.thread_count);
+  aocommon::DynamicFor<size_t> splitLoop;
 
   // Divide into columns (i.e. construct the vertical lines)
-  splitLoop.Run(1, settings_.parallel.grid_width, [&](size_t divNr, size_t) {
+  splitLoop.Run(1, settings_.parallel.grid_width, [&](size_t divNr) {
     const size_t splitMiddle = width * divNr / settings_.parallel.grid_width;
     const size_t splitStart = splitMiddle - avgHSubImageSize / 4;
     const size_t splitEnd = splitMiddle + avgHSubImageSize / 4;
@@ -427,7 +426,7 @@ void ParallelDeconvolution::ExecuteParallelRun(
 
   // Make the rows (horizontal lines)
   dividingLine = 0.0f;
-  splitLoop.Run(1, settings_.parallel.grid_height, [&](size_t divNr, size_t) {
+  splitLoop.Run(1, settings_.parallel.grid_height, [&](size_t divNr) {
     const size_t splitMiddle = height * divNr / settings_.parallel.grid_height;
     const size_t splitStart = splitMiddle - avgVSubImageSize / 4;
     const size_t splitEnd = splitMiddle + avgVSubImageSize / 4;
@@ -492,10 +491,9 @@ void ParallelDeconvolution::ExecuteParallelRun(
   }
 
   // Find the starting peak over all subimages
-  aocommon::ParallelFor<size_t> loop(settings_.parallel.max_threads);
   ImageSet resultModel(model_image, model_image.Width(), model_image.Height());
   resultModel = 0.0;
-  loop.Run(0, algorithms_.size(), [&](size_t index) {
+  aocommon::RecursiveFor::NestedRun(0, algorithms_.size(), [&](size_t index) {
     logs_.Activate(index);
     RunSubImage(subImages[index], data_image, model_image, resultModel,
                 psf_images[psf_image_indices[index]], 0.0, true, mutex);
@@ -518,7 +516,7 @@ void ParallelDeconvolution::ExecuteParallelRun(
   double mIterThreshold = maxValue * (1.0 - settings_.major_loop_gain);
 
   // Run the deconvolution
-  loop.Run(0, algorithms_.size(), [&](size_t index) {
+  aocommon::RecursiveFor::NestedRun(0, algorithms_.size(), [&](size_t index) {
     logs_.Activate(index);
     RunSubImage(subImages[index], data_image, model_image, resultModel,
                 psf_images[psf_image_indices[index]], mIterThreshold, false,

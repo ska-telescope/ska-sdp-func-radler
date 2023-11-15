@@ -87,7 +87,6 @@ float GenericClean::ExecuteMajorIteration(
     const size_t horBorderSize = std::round(width * CleanBorderRatio());
     const size_t vertBorderSize = std::round(height * CleanBorderRatio());
     subMinorLoop.SetCleanBorders(horBorderSize, vertBorderSize);
-    subMinorLoop.SetThreadCount(ThreadCount());
 
     maxValue = subMinorLoop.Run(dirty_set, psfs);
 
@@ -112,7 +111,7 @@ float GenericClean::ExecuteMajorIteration(
       }
     }
   } else {
-    ThreadedDeconvolutionTools tools(ThreadCount());
+    ThreadedDeconvolutionTools tools;
     size_t peakIndex = componentX + componentY * width;
 
     aocommon::UVector<float> peakValues(dirty_set.Size());

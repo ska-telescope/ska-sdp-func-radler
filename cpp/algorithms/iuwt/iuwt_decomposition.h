@@ -91,13 +91,11 @@ class IuwtDecomposition {
     }
   }
 
-  void Decompose(aocommon::StaticFor<size_t>& loop, const float* input,
-                 float* scratch, bool include_largest) {
-    DecomposeMt(loop, input, scratch, include_largest);
+  void Decompose(const float* input, float* scratch, bool include_largest) {
+    DecomposeMt(input, scratch, include_largest);
   }
 
-  void DecomposeMt(aocommon::StaticFor<size_t>& loop, const float* input,
-                   float* scratch, bool include_largest);
+  void DecomposeMt(const float* input, float* scratch, bool include_largest);
 
   void DecomposeSt(const float* input, float* scratch) {
     aocommon::UVector<float> i0(input, input + _width * _height);
@@ -262,9 +260,8 @@ class IuwtDecomposition {
     }
   }
 
-  static void convolveMT(aocommon::StaticFor<size_t>& loop, float* output,
-                         const float* image, float* scratch, size_t width,
-                         size_t height, int scale);
+  static void convolveMT(float* output, const float* image, float* scratch,
+                         size_t width, size_t height, int scale);
 
   static void convolveHorizontalPartial(float* output, const float* image,
                                         size_t width, size_t startY,
@@ -325,9 +322,8 @@ class IuwtDecomposition {
                endY - startY);
   }
 
-  static void differenceMT(aocommon::StaticFor<size_t>& loop, float* dest,
-                           const float* lhs, const float* rhs, size_t width,
-                           size_t height);
+  static void differenceMT(float* dest, const float* lhs, const float* rhs,
+                           size_t width, size_t height);
 
   static void difference(float* dest, const float* lhs, const float* rhs,
                          size_t width, size_t height) {

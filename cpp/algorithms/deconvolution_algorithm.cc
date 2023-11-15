@@ -8,9 +8,7 @@
 
 namespace radler::algorithms {
 
-DeconvolutionAlgorithm::DeconvolutionAlgorithm() {
-  settings_.thread_count = aocommon::system::ProcessorCount();
-}
+DeconvolutionAlgorithm::DeconvolutionAlgorithm() = default;
 
 DeconvolutionAlgorithm::DeconvolutionAlgorithm(
     const DeconvolutionAlgorithm& other)

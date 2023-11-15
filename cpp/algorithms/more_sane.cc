@@ -20,9 +20,8 @@ void MoreSane::ExecuteMajorIteration(float* residual_data, float* model_data,
     aocommon::Logger::Info << "Convolving model with psf...\n";
     aocommon::Image preparedPsf(width, height);
     schaapcommon::fft::PrepareConvolutionKernel(
-        preparedPsf.Data(), psf_image.Data(), width, height, ThreadCount());
-    schaapcommon::fft::Convolve(model_data, preparedPsf.Data(), width, height,
-                                ThreadCount());
+        preparedPsf.Data(), psf_image.Data(), width, height);
+    schaapcommon::fft::Convolve(model_data, preparedPsf.Data(), width, height);
     aocommon::Logger::Info << "Adding model back to residual...\n";
     for (size_t i = 0; i != width * height; ++i) {
       residual_data[i] += model_data[i];

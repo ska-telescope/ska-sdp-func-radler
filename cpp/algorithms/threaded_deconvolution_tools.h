@@ -18,8 +18,6 @@ namespace radler::algorithms {
 
 class ThreadedDeconvolutionTools {
  public:
-  explicit ThreadedDeconvolutionTools(size_t thread_count);
-
   struct PeakData {
     std::optional<float> normalized_value;
     std::optional<float> unnormalized_value;
@@ -51,8 +49,6 @@ class ThreadedDeconvolutionTools {
       float scale, bool allow_negative_components, const bool* mask,
       float border_ratio, const aocommon::Image& rms_factor_image,
       bool calculate_rms);
-
-  size_t thread_count_;
 };
 }  // namespace radler::algorithms
 #endif

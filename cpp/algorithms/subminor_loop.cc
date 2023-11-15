@@ -190,8 +190,8 @@ void SubMinorLoop::CorrectResidualDirty(
   // Get padded kernel in scratch_b
   Image::Untrim(scratch_a, _paddedWidth, _paddedHeight, single_convolved_psf,
                 _width, _height);
-  schaapcommon::fft::PrepareConvolutionKernel(
-      scratch_b, scratch_a, _paddedWidth, _paddedHeight, _threadCount);
+  schaapcommon::fft::PrepareConvolutionKernel(scratch_b, scratch_a,
+                                              _paddedWidth, _paddedHeight);
 
   // Get padded model image in scratch_a
   GetFullIndividualModel(image_index, scratch_c);
@@ -199,8 +199,8 @@ void SubMinorLoop::CorrectResidualDirty(
                 _height);
 
   // Convolve and store in scratch_a
-  schaapcommon::fft::Convolve(scratch_a, scratch_b, _paddedWidth, _paddedHeight,
-                              _threadCount);
+  schaapcommon::fft::Convolve(scratch_a, scratch_b, _paddedWidth,
+                              _paddedHeight);
 
   // Trim the result into scratch_c
   Image::Trim(scratch_c, _width, _height, scratch_a, _paddedWidth,

@@ -10,6 +10,7 @@
 #include <aocommon/imagecoordinates.h>
 #include <aocommon/logger.h>
 #include <aocommon/units/fluxdensity.h>
+#include <aocommon/threadpool.h>
 
 #include <schaapcommon/fft/convolution.h>
 
@@ -130,6 +131,18 @@ const algorithms::DeconvolutionAlgorithm& Radler::MaxScaleCountAlgorithm()
 
 void Radler::Perform(bool& reached_major_threshold,
                      size_t major_iteration_number) {
+  /**
+   * Because functions like convolution in schaapcommon use parallelized fors,
+   * and because these itself occur in the deconvolution of different sub-images
+   * that may also be parallelized over, it is necessary to have a recursive for
+   * alive so that all fors are scheduled through this recursive for.
+   */
+  std::optional<aocommon::RecursiveFor> recursive_for;
+  if (aocommon::RecursiveFor::GetInstance() == nullptr) {
+    aocommon::ThreadPool::GetInstance().SetNThreads(settings_.thread_count);
+    recursive_for.emplace();
+  }
+
   assert(table_);
   table_->ValidatePsfs();
 
@@ -187,16 +200,14 @@ void Radler::Perform(bool& reached_major_threshold,
           assert(false);
           break;
         case LocalRmsMethod::kRmsWindow:
-          math::rms_image::Make(rms_image, integrated,
-                                settings_.local_rms.window, beam_size_,
-                                beam_size_, 0.0, pixel_scale_x_, pixel_scale_y_,
-                                settings_.thread_count);
+          math::rms_image::Make(
+              rms_image, integrated, settings_.local_rms.window, beam_size_,
+              beam_size_, 0.0, pixel_scale_x_, pixel_scale_y_);
           break;
         case LocalRmsMethod::kRmsAndMinimumWindow:
           math::rms_image::MakeWithNegativityLimit(
               rms_image, integrated, settings_.local_rms.window, beam_size_,
-              beam_size_, 0.0, pixel_scale_x_, pixel_scale_y_,
-              settings_.thread_count);
+              beam_size_, 0.0, pixel_scale_x_, pixel_scale_y_);
           break;
       }
       // Normalize the RMS image relative to the threshold so that Jy remains
@@ -351,7 +362,6 @@ void Radler::InitializeDeconvolutionAlgorithm(
   algorithm->SetCleanBorderRatio(settings_.border_ratio);
   algorithm->SetAllowNegativeComponents(settings_.allow_negative_components);
   algorithm->SetStopOnNegativeComponents(settings_.stop_on_negative_components);
-  algorithm->SetThreadCount(settings_.thread_count);
   const size_t n_polarizations = table_->OriginalGroups().front().size();
   algorithm->SetSpectralFitter(CreateSpectralFitter(), n_polarizations);
 

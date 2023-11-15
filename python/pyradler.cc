@@ -217,6 +217,10 @@ void init_radler(py::module& m) {
             if (reached_major_threshold) {
               aocommon::Logger::Info << "Major threshold already reached.\n";
             } else {
+              // The scoped_ostream_redirect may grab the Global Interpreter
+              // Lock (GIL) from a different thread, which causes hanging
+              // if the GIL is not released beforehand
+              py::gil_scoped_release release;
               self.Perform(reached_major_threshold, major_iteration_number);
             }
             return reached_major_threshold;

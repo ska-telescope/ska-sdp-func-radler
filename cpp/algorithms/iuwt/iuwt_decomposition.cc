@@ -6,8 +6,7 @@ using aocommon::Image;
 
 namespace radler::algorithms::iuwt {
 
-void IuwtDecomposition::DecomposeMt(aocommon::StaticFor<size_t>& loop,
-                                    const float* input, float* scratch,
+void IuwtDecomposition::DecomposeMt(const float* input, float* scratch,
                                     bool include_largest) {
   Image& i1(_scales.back().Coefficients());
   i1 = Image(_width, _height);
@@ -16,12 +15,11 @@ void IuwtDecomposition::DecomposeMt(aocommon::StaticFor<size_t>& loop,
   // copy the input into i0.
   Image& coefficients0 = _scales[0].Coefficients();
   coefficients0 = Image(_width, _height);
-  convolveMT(loop, i1.Data(), input, scratch, _width, _height, 1);
-  convolveMT(loop, coefficients0.Data(), i1.Data(), scratch, _width, _height,
-             1);
+  convolveMT(i1.Data(), input, scratch, _width, _height, 1);
+  convolveMT(coefficients0.Data(), i1.Data(), scratch, _width, _height, 1);
 
   // coefficients = i0 - i2
-  differenceMT(loop, coefficients0.Data(), input, coefficients0.Data(), _width,
+  differenceMT(coefficients0.Data(), input, coefficients0.Data(), _width,
                _height);
 
   // i0 = i1;
@@ -30,13 +28,13 @@ void IuwtDecomposition::DecomposeMt(aocommon::StaticFor<size_t>& loop,
   for (int scale = 1; scale != static_cast<int>(_scaleCount); ++scale) {
     Image& coefficients = _scales[scale].Coefficients();
     coefficients = Image(_width, _height);
-    convolveMT(loop, i1.Data(), i0.Data(), scratch, _width, _height, scale + 1);
-    convolveMT(loop, coefficients.Data(), i1.Data(), scratch, _width, _height,
+    convolveMT(i1.Data(), i0.Data(), scratch, _width, _height, scale + 1);
+    convolveMT(coefficients.Data(), i1.Data(), scratch, _width, _height,
                scale + 1);
 
     // coefficients = i0 - i2
-    differenceMT(loop, coefficients.Data(), i0.Data(), coefficients.Data(),
-                 _width, _height);
+    differenceMT(coefficients.Data(), i0.Data(), coefficients.Data(), _width,
+                 _height);
 
     // i0 = i1;
     if (scale + 1 != static_cast<int>(_scaleCount)) {
@@ -54,10 +52,10 @@ void IuwtDecomposition::DecomposeMt(aocommon::StaticFor<size_t>& loop,
   if (!include_largest) _scales.back().Coefficients().Reset();
 }
 
-void IuwtDecomposition::convolveMT(aocommon::StaticFor<size_t>& loop,
-                                   float* output, const float* image,
+void IuwtDecomposition::convolveMT(float* output, const float* image,
                                    float* scratch, size_t width, size_t height,
                                    int scale) {
+  aocommon::StaticFor<size_t> loop;
   loop.Run(0, height, [&](size_t y_start, size_t y_end) {
     convolveHorizontalPartial(scratch, image, width, y_start, y_end, scale);
   });
@@ -68,10 +66,10 @@ void IuwtDecomposition::convolveMT(aocommon::StaticFor<size_t>& loop,
   });
 }
 
-void IuwtDecomposition::differenceMT(aocommon::StaticFor<size_t>& loop,
-                                     float* dest, const float* lhs,
+void IuwtDecomposition::differenceMT(float* dest, const float* lhs,
                                      const float* rhs, size_t width,
                                      size_t height) {
+  aocommon::StaticFor<size_t> loop;
   loop.Run(0, height, [&](size_t y_start, size_t y_end) {
     differencePartial(dest, lhs, rhs, width, y_start, y_end);
   });

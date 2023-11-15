@@ -13,8 +13,7 @@ namespace radler::math::rms_image {
 
 void Make(Image& rms_output, const Image& input_image, double window_size,
           long double beam_major, long double beam_minor, long double beam_pa,
-          long double pixel_scale_l, long double pixel_scale_m,
-          size_t thread_count) {
+          long double pixel_scale_l, long double pixel_scale_m) {
   Image image(input_image);
   image.Square();
   rms_output = Image(image.Width(), image.Height(), 0.0);
@@ -22,7 +21,7 @@ void Make(Image& rms_output, const Image& input_image, double window_size,
   schaapcommon::fft::RestoreImage(
       rms_output.Data(), image.Data(), image.Width(), image.Height(),
       beam_major * window_size, beam_minor * window_size, beam_pa,
-      pixel_scale_l, pixel_scale_m, thread_count);
+      pixel_scale_l, pixel_scale_m);
 
   const double s = std::sqrt(2.0 * M_PI);
   const long double sigmaMaj = beam_major / (2.0L * sqrtl(2.0L * logl(2.0L)));
@@ -32,13 +31,12 @@ void Make(Image& rms_output, const Image& input_image, double window_size,
   for (auto& val : rms_output) val = std::sqrt(val * norm);
 }
 
-void SlidingMinimum(Image& output, const Image& input, size_t window_size,
-                    size_t thread_count) {
+void SlidingMinimum(Image& output, const Image& input, size_t window_size) {
   const size_t width = input.Width();
   output = Image(width, input.Height());
   Image temp(output);
 
-  aocommon::StaticFor<size_t> loop(thread_count);
+  aocommon::StaticFor<size_t> loop;
 
   loop.Run(0, input.Height(), [&](size_t yStart, size_t yEnd) {
     for (size_t y = yStart; y != yEnd; ++y) {
@@ -69,11 +67,10 @@ void SlidingMinimum(Image& output, const Image& input, size_t window_size,
   });
 }
 
-void SlidingMaximum(Image& output, const Image& input, size_t window_size,
-                    size_t thread_count) {
+void SlidingMaximum(Image& output, const Image& input, size_t window_size) {
   Image flipped(input);
   flipped.Negate();
-  SlidingMinimum(output, flipped, window_size, thread_count);
+  SlidingMinimum(output, flipped, window_size);
   output.Negate();
 }
 
@@ -81,13 +78,12 @@ void MakeWithNegativityLimit(Image& rms_output, const Image& input_image,
                              double window_size, long double beam_major,
                              long double beam_minor, long double beam_pa,
                              long double pixel_scale_l,
-                             long double pixel_scale_m, size_t thread_count) {
+                             long double pixel_scale_m) {
   Make(rms_output, input_image, window_size, beam_major, beam_minor, beam_pa,
-       pixel_scale_l, pixel_scale_m, thread_count);
+       pixel_scale_l, pixel_scale_m);
   Image slidingMinimum(input_image.Width(), input_image.Height());
   double beamInPixels = std::max(beam_major / pixel_scale_l, 1.0L);
-  SlidingMinimum(slidingMinimum, input_image, window_size * beamInPixels,
-                 thread_count);
+  SlidingMinimum(slidingMinimum, input_image, window_size * beamInPixels);
   for (size_t i = 0; i != rms_output.Size(); ++i) {
     rms_output[i] = std::max<float>(rms_output[i],
                                     std::abs(slidingMinimum[i]) * (1.5 / 5.0));

@@ -196,7 +196,6 @@ class IuwtDeconvolutionAlgorithm {
   std::vector<ScaleResponse> psf_response_;
   bool allow_negative_components_;
   ImageSet* dirty_set_;
-  aocommon::StaticFor<size_t>* static_for_;
 };
 }  // namespace radler::algorithms
 #endif  // RADLER_ALGORITHMS_IUWT_DECONVOLUTION_ALGORITHM_H_

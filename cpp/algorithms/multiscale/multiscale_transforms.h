@@ -19,7 +19,7 @@ class MultiScaleTransforms {
   using Shape = radler::MultiscaleShape;
 
   MultiScaleTransforms(size_t width, size_t height, Shape shape)
-      : _width(width), _height(height), _shape(shape), _threadCount(1) {}
+      : _width(width), _height(height), _shape(shape) {}
 
   MultiScaleTransforms(const MultiScaleTransforms&) = default;
   MultiScaleTransforms(MultiScaleTransforms&&) = default;
@@ -108,12 +108,9 @@ class MultiScaleTransforms {
     return scaleSizeInPixels * (3.0 / 16.0);
   }
 
-  void SetThreadCount(size_t threadCount) { _threadCount = threadCount; }
-
  private:
   size_t _width, _height;
   Shape _shape;
-  size_t _threadCount;
 
   static size_t taperedQuadraticKernelSize(double scaleInPixels) {
     return size_t(ceil(scaleInPixels * 0.5) * 2.0) + 1;

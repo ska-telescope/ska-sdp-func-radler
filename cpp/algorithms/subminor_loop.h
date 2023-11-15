@@ -118,8 +118,7 @@ class SubMinorLoop {
         _parentAlgorithm(nullptr),
         _subMinorModel(width, height),
         _fluxCleaned(0.0),
-        _logReceiver(log_receiver),
-        _threadCount(1) {}
+        _logReceiver(log_receiver) {}
 
   // TODO(AST-912) Make copy/move operations Google Style compliant.
   SubMinorLoop(const SubMinorLoop&) = delete;
@@ -171,8 +170,6 @@ class SubMinorLoop {
     _rmsFactorImage = image;
   }
 
-  void SetThreadCount(size_t thread_count) { _threadCount = thread_count; }
-
   size_t CurrentIteration() const { return _currentIteration; }
 
   float FluxCleaned() const { return _fluxCleaned; }
@@ -218,7 +215,6 @@ class SubMinorLoop {
   float _fluxCleaned;
   aocommon::Image _rmsFactorImage;
   aocommon::LogReceiver& _logReceiver;
-  size_t _threadCount;
 };
 }  // namespace radler::algorithms
 #endif  // RADLER_ALGORITHMS_SUB_MINOR_LOOP_H_

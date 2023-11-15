@@ -77,7 +77,7 @@ float MultiScaleAlgorithm::ExecuteMajorIteration(
   if (StopOnNegativeComponents()) SetAllowNegativeComponents(true);
   // The threads always need to be stopped at the end of this function, so we
   // use a scoped local variable.
-  ThreadedDeconvolutionTools tools(ThreadCount());
+  ThreadedDeconvolutionTools tools;
 
   InitializeScaleInfo(std::min(width, height));
 
@@ -138,7 +138,6 @@ float MultiScaleAlgorithm::ExecuteMajorIteration(
   }
 
   multiscale::MultiScaleTransforms msTransforms(width, height, settings_.shape);
-  msTransforms.SetThreadCount(ThreadCount());
 
   size_t scaleWithPeak;
   FindActiveScaleConvolvedMaxima(data_image, integratedScratch, scratch, true,
@@ -245,7 +244,6 @@ float MultiScaleAlgorithm::ExecuteMajorIteration(
       subLoop.SetGain(scale_infos_[scaleWithPeak].gain);
       subLoop.SetAllowNegativeComponents(AllowNegativeComponents());
       subLoop.SetStopOnNegativeComponent(StopOnNegativeComponents());
-      subLoop.SetThreadCount(ThreadCount());
       const size_t scaleBorder = ceil(scale_infos_[scaleWithPeak].scale * 0.5);
       const size_t horBorderSize =
           std::max<size_t>(round(width * CleanBorderRatio()), scaleBorder);
@@ -452,7 +450,6 @@ void MultiScaleAlgorithm::ConvolvePsfs(std::unique_ptr<Image[]>& convolved_psfs,
                                        bool is_integrated) {
   multiscale::MultiScaleTransforms msTransforms(psf.Width(), psf.Height(),
                                                 settings_.shape);
-  msTransforms.SetThreadCount(ThreadCount());
   convolved_psfs = std::make_unique<Image[]>(scale_infos_.size());
   if (is_integrated) LogReceiver().Info << "Scale info:\n";
   const double firstAutoScaleSize = beam_size_in_pixels_ * 2.0;

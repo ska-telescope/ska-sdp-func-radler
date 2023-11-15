@@ -224,7 +224,7 @@ void ImageSet::InterpolateAndStoreModel(
     // TODO: this assumes that polarizations are not joined!
     size_t n_terms = fitter.NTerms();
     aocommon::UVector<float> terms_image(Width() * Height() * n_terms);
-    aocommon::StaticFor<size_t> loop(thread_count);
+    aocommon::StaticFor<size_t> loop;
     loop.Run(0, Height(), [&](size_t y_start, size_t y_end) {
       aocommon::UVector<float> spectral_pixel(NDeconvolutionChannels());
       std::vector<float> terms_pixel;
