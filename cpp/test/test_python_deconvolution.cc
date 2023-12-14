@@ -84,8 +84,7 @@ def deconvolve(residual, model, psf, meta):
   raise RuntimeError("This is a test to see if WSClean handles a raise correctly")
 )");
 
-  aocommon::Logger::SetVerbosity(
-      aocommon::Logger::VerbosityLevel::kQuietVerbosity);
+  aocommon::Logger::SetVerbosity(aocommon::LogVerbosityLevel::kQuiet);
 
   Radler radler(settings, psf_image, residual_image, model_image, 0.0);
   try {
