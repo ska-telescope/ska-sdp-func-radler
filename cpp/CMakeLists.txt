@@ -9,7 +9,8 @@ function(install_headers_with_directory HEADER_LIST)
   endforeach(HEADER)
 endfunction(install_headers_with_directory)
 
-add_library(${PROJECT_NAME} SHARED "")
+add_library(radler STATIC "")
+set_target_properties(radler PROPERTIES POSITION_INDEPENDENT_CODE True)
 
 set(RADLER_FILES
     radler.cc
@@ -56,16 +57,15 @@ set_source_files_properties(
 set_source_files_properties(algorithms/python_deconvolution.cpp
                             PROPERTIES COMPILE_FLAGS -fvisibility=hidden)
 
-target_sources(${PROJECT_NAME} PRIVATE ${RADLER_FILES})
-target_link_libraries(${PROJECT_NAME} ${RADLER_TARGET_LIBS})
-target_include_directories(${PROJECT_NAME} SYSTEM
-                           PUBLIC ${RADLER_TARGET_INCLUDE_DIRS})
+target_sources(radler PRIVATE ${RADLER_FILES})
+target_link_libraries(radler ${RADLER_TARGET_LIBS})
+target_include_directories(radler SYSTEM PUBLIC ${RADLER_TARGET_INCLUDE_DIRS})
 
 # Allows including the paths relative to base algorithm, in line with Google
 # style
 # https://google.github.io/styleguide/cppguide.html#Names_and_Order_of_Includes
 target_include_directories(
-  ${PROJECT_NAME} PRIVATE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
+  radler PRIVATE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
 
 target_compile_options(radler PRIVATE -O3 -Wall -Wzero-as-null-pointer-constant)
 
@@ -85,11 +85,9 @@ endif()
 
 if(NOT COMPILE_AS_EXTERNAL_PROJECT)
   include(GNUInstallDirs)
-  install(TARGETS ${PROJECT_NAME}
-          LIBRARY DESTINATION ${CMAKE_INSTALL_FULL_LIBDIR})
+  install(TARGETS radler ARCHIVE DESTINATION ${CMAKE_INSTALL_FULL_LIBDIR})
 else()
-  install(TARGETS ${PROJECT_NAME}
-          LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
+  install(TARGETS radler ARCHIVE DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
 endif()
 
 set(PUBLIC_HEADERS
