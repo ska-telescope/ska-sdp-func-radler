@@ -1,7 +1,12 @@
+# Copyright (C) 2024 ASTRON (Netherlands Institute for Radio Astronomy)
 # SPDX-License-Identifier: LGPL-3.0-only
 
 # This file contains the pipelines that run on the SKA repository of Radler,
 # which is at https://gitlab.com/ska-telescope/sdp/ska-sdp-func-radler
+
+.dind-requester:
+  services:
+    - docker:20.10-dind
 
 include:
   - local: .gitlab-ci.common.yml

@@ -1,6 +1,11 @@
+# Copyright (C) 2024 ASTRON (Netherlands Institute for Radio Astronomy)
 # SPDX-License-Identifier: LGPL-3.0-only
 
 # This file contains the pipelines that run on the Astron repository of Radler,
 # which is at https://git.astron.nl/RD/radler
+
+.dind-requester:
+  tags:
+    - dind
 
 include: .gitlab-ci.common.yml
