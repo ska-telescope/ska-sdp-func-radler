@@ -1,5 +1,8 @@
 # SPDX-License-Identifier: LGPL-3.0-only
 
+# This file contains the common parts of both the Astron and SKA pipelines of
+# Radler. The yml files for those pipelines include this file.
+
 workflow:
   rules:
     # don't create a pipeline if its a commit pipeline, on a branch and that branch has open merge requests (we will get a MR build instead)
@@ -37,10 +40,9 @@ versioning:
 
 .prepare:
   stage: prepare
+  extends: .dind-requester
   needs: ["versioning"]
   image: docker:20.10
-  services:
-    - docker:20.10-dind
   variables:
     GIT_SUBMODULE_STRATEGY: none
   before_script:
