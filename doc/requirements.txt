@@ -5,3 +5,4 @@
 breathe
 myst-parser
 numpy
+sphinx_rtd_theme
