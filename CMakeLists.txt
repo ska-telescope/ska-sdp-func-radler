@@ -6,7 +6,8 @@ include(ExternalProject)
 # When Radler is compiled as an ExternalProject inside another project, set this
 # option to On. See, e.g., the wsclean CMake file for an example.
 option(COMPILE_AS_EXTERNAL_PROJECT OFF)
-option(PORTABLE "Generate portable code" OFF)
+option(PORTABLE "Build portable binaries (with slightly decreased performance)"
+       OFF)
 option(BUILD_PYTHON_BINDINGS "Build python bindings" OFF)
 option(BUILD_DOCUMENTATION "Build documentation" OFF)
 option(BUILD_DOCSTRINGS "Build docstrings (implies BUILD_DOCUMENTATION)" OFF)
@@ -47,15 +48,6 @@ if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
   add_compile_options(-DNDEBUG)
 endif()
 
-include(CheckCXXCompilerFlag)
-if(PORTABLE)
-  if(DEFINED TARGET_CPU)
-    message(WARNING "You have selected to build PORTABLE binaries. "
-                    "TARGET_CPU settings will be ignored.")
-    unset(TARGET_CPU CACHE)
-  endif()
-endif()
-
 if(NOT COMPILE_AS_EXTERNAL_PROJECT)
   # Include submodules
   set(ExternalSubmoduleDirectories aocommon pybind11 schaapcommon)
@@ -92,6 +84,9 @@ if(NOT COMPILE_AS_EXTERNAL_PROJECT)
     endif()
   endif()
 endif()
+
+# User may optionally set `TARGET_CPU` if `PORTABLE=OFF`
+include(external/aocommon/CMake/SetTargetCPU.cmake)
 
 if(COMPILE_AS_EXTERNAL_PROJECT)
   message(

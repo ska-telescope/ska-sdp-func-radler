@@ -69,20 +69,6 @@ target_include_directories(
 
 target_compile_options(radler PRIVATE -O3 -Wall -Wzero-as-null-pointer-constant)
 
-if(NOT PORTABLE)
-  if(DEFINED TARGET_CPU)
-    target_compile_options(radler BEFORE PRIVATE -march=${TARGET_CPU})
-  else()
-    check_cxx_compiler_flag("-march=native" COMPILER_HAS_MARCH_NATIVE)
-    if(COMPILER_HAS_MARCH_NATIVE)
-      target_compile_options(radler BEFORE PRIVATE -march=native)
-    else()
-      message(
-        WARNING "The compiler doesn't support -march=native for your CPU.")
-    endif()
-  endif()
-endif()
-
 if(NOT COMPILE_AS_EXTERNAL_PROJECT)
   include(GNUInstallDirs)
   install(TARGETS radler ARCHIVE DESTINATION ${CMAKE_INSTALL_FULL_LIBDIR})
