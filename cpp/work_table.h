@@ -107,6 +107,15 @@ class WorkTable {
     return original_groups_[deconvolution_groups_[deconvolution_index].front()];
   }
 
+  Group GetOriginalSamePolarizationGroup(
+      aocommon::PolarizationEnum polarization) const {
+    Group result;
+    for (const std::unique_ptr<WorkTableEntry>& entry : entries_) {
+      if (entry->polarization == polarization) result.emplace_back(entry.get());
+    }
+    return result;
+  }
+
   EntryIteratorLite Begin() const {
     return EntryIteratorLite(entries_.begin());
   }

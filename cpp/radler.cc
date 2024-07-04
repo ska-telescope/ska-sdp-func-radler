@@ -294,8 +294,7 @@ void Radler::Perform(bool& reached_major_threshold,
 
   residual_set.AssignAndStoreResidual();
   model_set.InterpolateAndStoreModel(
-      parallel_deconvolution_->FirstAlgorithm().Fitter(),
-      settings_.thread_count);
+      parallel_deconvolution_->FirstAlgorithm().Fitter());
 }
 
 std::unique_ptr<schaapcommon::fitters::SpectralFitter>

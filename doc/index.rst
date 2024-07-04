@@ -1,7 +1,7 @@
 Radler: Radio Astronomical Deconvolution Library
 ================================================
 
-Radler is a library providing functionality for deconvolving astronomical images. The library was split off from WSClean, `https://gitlab.com/aroffringa/wsclean`_ in order to enhance modularity and comparisons.
+Radler is a library providing functionality for deconvolving astronomical images. The library was split off from `WSClean <https://gitlab.com/aroffringa/wsclean>`_ in order to enhance modularity and comparisons.
 
 Documentation
 -------------

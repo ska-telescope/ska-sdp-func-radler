@@ -85,7 +85,7 @@ class ImageSet {
       const;
 
   void InterpolateAndStoreModel(
-      const schaapcommon::fitters::SpectralFitter& fitter, size_t thread_count);
+      const schaapcommon::fitters::SpectralFitter& fitter);
 
   void AssignAndStoreResidual();
 

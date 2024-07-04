@@ -103,10 +103,8 @@ int main(int argc, char* argv[]) {
                                     reachedThreshold);
 
     residualSet.AssignAndStoreResidual();
-    modelSet.InterpolateAndStoreModel(
-        schaapcommon::fitters::SpectralFitter(
-            schaapcommon::fitters::SpectralFittingMode::kNoFitting, 0),
-        1);
+    modelSet.InterpolateAndStoreModel(schaapcommon::fitters::SpectralFitter(
+        schaapcommon::fitters::SpectralFittingMode::kNoFitting, 0));
   }
   return 0;
 }

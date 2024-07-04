@@ -2,6 +2,7 @@
 
 #include "image_set.h"
 
+#include "utils/load_and_store_image_accessor.h"
 #include "utils/load_image_accessor.h"
 
 #include "test/imageaccessor.h"
@@ -11,6 +12,7 @@
 #include <boost/test/unit_test.hpp>
 
 #include <aocommon/image.h>
+#include <aocommon/logger.h>
 #include <aocommon/polarization.h>
 
 #include <schaapcommon/fitters/spectralfitter.h>
@@ -31,7 +33,7 @@ struct ImageSetFixtureBase {
 
   void addToImageSet(size_t outChannel, PolarizationEnum pol,
                      size_t frequencyMHz, double imageWeight = 1.0,
-                     const Image* image = nullptr) {
+                     Image* image = nullptr, bool read_write = false) {
     auto e = std::make_unique<WorkTableEntry>();
     e->original_channel_index = outChannel;
     e->polarization = pol;
@@ -40,8 +42,13 @@ struct ImageSetFixtureBase {
     e->image_weight = imageWeight;
     e->psf_accessors.emplace_back(std::make_unique<test::DummyImageAccessor>());
     if (image) {
-      e->model_accessor =
-          std::make_unique<utils::LoadOnlyImageAccessor>(*image);
+      if (read_write) {
+        e->model_accessor =
+            std::make_unique<utils::LoadAndStoreImageAccessor>(*image);
+      } else {
+        e->model_accessor =
+            std::make_unique<utils::LoadOnlyImageAccessor>(*image);
+      }
     } else {
       e->model_accessor = std::make_unique<test::DummyImageAccessor>();
     }
@@ -610,6 +617,61 @@ BOOST_FIXTURE_TEST_CASE(load_average_psfs_multiple_psf_and_channels,
   BOOST_REQUIRE(psfs[1].size() == 1);
   CompareImages(psfs[0][0], kExpectedImage0);
   CompareImages(psfs[1][0], kExpectedImage1);
+}
+
+BOOST_FIXTURE_TEST_CASE(interpolate_and_store_model, ImageSetFixtureBase) {
+  aocommon::Logger::SetVerbosity(aocommon::LogVerbosityLevel::kQuiet);
+  constexpr size_t kNDeconvolutionChannels = 2;
+  initTable({}, 6, kNDeconvolutionChannels);
+  constexpr size_t kWidth = 7;
+  constexpr size_t kHeight = 9;
+  constexpr size_t kNPolarizations = 4;
+  constexpr PolarizationEnum pols[kNPolarizations] = {
+      PolarizationEnum::StokesI,
+      PolarizationEnum::StokesQ,
+      PolarizationEnum::StokesU,
+      PolarizationEnum::StokesV,
+  };
+  std::vector<Image> stored_images(table->OriginalGroups().size() *
+                                   kNPolarizations);
+  for (size_t channel = 0; channel != table->OriginalGroups().size();
+       ++channel) {
+    const double frequency = 100 + channel;
+    for (size_t p = 0; p != kNPolarizations; ++p) {
+      const size_t index = channel * kNPolarizations + p;
+      // assign the entire image to 42: is going to be overwritten later on
+      stored_images[index] = Image(kWidth, kHeight, 42);
+      addToImageSet(channel, pols[p], frequency, 1.0, &stored_images[index],
+                    true);
+    }
+  }
+  const std::set<PolarizationEnum> kLinkedPolarizations(std::begin(pols),
+                                                        std::end(pols));
+  ImageSet image_set(*table, false, kLinkedPolarizations, kWidth, kHeight);
+  BOOST_CHECK_EQUAL(image_set.NDeconvolutionChannels(),
+                    kNDeconvolutionChannels);
+  BOOST_CHECK_EQUAL(image_set.Size(),
+                    kNPolarizations * kNDeconvolutionChannels);
+  for (size_t i = 0; i != image_set.Size(); ++i) {
+    image_set.SetImage(i, aocommon::Image(kWidth, kHeight, i));
+  }
+
+  std::vector<double> frequencies{101.0, 104.0};
+  std::vector<float> weights{1.0, 1.0};
+  schaapcommon::fitters::SpectralFitter fitter(
+      schaapcommon::fitters::SpectralFittingMode::kPolynomial, 1, frequencies,
+      weights);
+  image_set.InterpolateAndStoreModel(fitter);
+  for (const WorkTableEntry& entry : *table) {
+    Image image(kWidth, kHeight, -1.0);
+    entry.model_accessor->Load(image.Data());
+    // Every polarization has a value that is averaged over all channels,
+    // and the channel values are:
+    // - 0, 4 for pol 0
+    // - 1, 5 for pol 1, etcetera
+    // so for each polarization, the average is pol_index + 2.
+    BOOST_CHECK_CLOSE_FRACTION(image[0], entry.index % 4 + 2, 1e-6);
+  }
 }
 
 BOOST_AUTO_TEST_SUITE_END()
