@@ -8,6 +8,8 @@ SOURCE_DIR=$(dirname "$0")/..
 #relative to SOURCE_DIR.
 EXCLUDE_DIRS=(external build CMake python/docstrings)
 
+CLANG_FORMAT_BINARY=clang-format-14
+
 #End script configuration.
 
 #The common formatting script has further documentation.

@@ -1,19 +1,19 @@
 # SPDX-License-Identifier: LGPL-3.0-only
 
 # base
-FROM ubuntu:22.04
+FROM ubuntu:24.04
 # libclang, llvm just needed for docstrings (for development only)
 RUN export DEBIAN_FRONTEND="noninteractive" && \
     apt-get update && \
     apt-get upgrade -y && \
     apt-get -y install \
+    	black \
         casacore-dev \
         casacore-tools \
-        libclang1 \
-        clang-format-12 \
-        clang-tidy-12 \
+	clang-format-14 \
+	clang-tidy \
         cmake \
-        doxygen \
+	doxygen \
         g++ \
         gcovr \
         git \
@@ -27,29 +27,20 @@ RUN export DEBIAN_FRONTEND="noninteractive" && \
         locales \
         make \
         ninja-build \
+	python3-breathe \
+	python3-numpy \
         python3-pip \
+	python3-pytest \
+	python3-pytest-lazy-fixture \
+	python3-sphinx \
+	python3-sphinx-rtd-theme \
         wcslib-dev \
         wget \
     && \
-    rm -rf /var/lib/apt/lists/* \
-    # The formatter needs a binary named 'clang-format', not 'clang-format-12'.
-    # Same for clang-tidy-12
-    && \
-    ln -sf clang-format-12 /usr/bin/clang-format \
-    && \
-    ln -sf clang-tidy-12 /usr/bin/clang-tidy
-RUN python3 -m pip install \
-        black \
-        breathe \
+    rm -rf /var/lib/apt/lists/*
+RUN python3 -m pip install --break-system-packages \
         cmake-format \
-        myst-parser \
-        numpy \
-        pybind11-mkdoc \
-        pytest \
-        pytest-lazy-fixture \
-        sphinx \
-        sphinx_rtd_theme \
-    ;
+        pybind11-mkdoc
 RUN locale-gen en_US.UTF-8  # Necessary for creating docstrings (Högbom)
 ENV LANG en_US.UTF-8
 ENV LANGUAGE en_US:UTF-8

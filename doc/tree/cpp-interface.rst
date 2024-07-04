@@ -1,7 +1,7 @@
 C++ interface
 =============
 
-Below the most important parts of the Radler C++ API are documented.
+The following sections describe the most important parts of the Radler C++ API.
 
 .. toctree::
    :maxdepth: 1

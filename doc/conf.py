@@ -45,7 +45,6 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.napoleon",
     "breathe",
-    "myst_parser",
 ]
 
 # Disable typehints in signatures - doens't seem to take any effect
