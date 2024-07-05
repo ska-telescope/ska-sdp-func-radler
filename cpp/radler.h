@@ -47,12 +47,6 @@ class Radler {
 
   ~Radler();
 
-  // TODO(AST-912) Make copy/move operations Google Style compliant.
-  Radler(const Radler&) = delete;
-  Radler(Radler&&) = default;
-  Radler& operator=(const Radler&) = delete;
-  Radler& operator=(Radler&&) = delete;
-
   ComponentList GetComponentList() const;
 
   /**
@@ -62,6 +56,16 @@ class Radler {
    */
   const algorithms::DeconvolutionAlgorithm& MaxScaleCountAlgorithm() const;
 
+  /**
+   * @param [out] reached_major_threshold on exit, indicates whether another
+   * major iteration should be run. If @c true, the caller should do a new
+   * prediction-gridding iteration to calculate a new residual image, after
+   * which the @c Perform() function should be called again. If @c false on
+   * exit, the algorithm is finished and the caller can do its last
+   * prediction-gridding round.
+   * @param major_iteration_number How many major iterations (calls to @c
+   * Perform()) were performed so far.
+   */
   void Perform(bool& reached_major_threshold, size_t major_iteration_number);
 
   void FreeDeconvolutionAlgorithms();

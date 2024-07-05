@@ -75,7 +75,6 @@ class WorkTable {
                      std::size_t n_deconvolution_groups,
                      std::size_t channel_index_offset = 0);
 
-  // TODO(AST-912) Make copy/move operations Google Style compliant.
   WorkTable(const WorkTable&) = default;
   WorkTable(WorkTable&&) = default;
   WorkTable& operator=(const WorkTable&) = delete;
