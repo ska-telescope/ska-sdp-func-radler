@@ -138,7 +138,9 @@ build-2404:
     # build job artifacts, which causes rebuilds in ctest.
     # Re-running 'make' is more verbose and prevents rebuilds in ctest.
     - make -j`nproc`
-    - ctest -j`nproc` --output-on-failure -T test
+    # Do not run the unittests in parallel, since they would then update
+    # .gcda files with coverage information simultaneously.
+    - ctest --output-on-failure -T test
     # Check whether the python radler modules can be found from the home directory after updating the PYTHONPATH
     - PYVERSION=`python3 --version | grep -P -o ".*\s\K\d+\.\d+(?=\.\d+)"`
     - export PYTHONPATH=${CI_PROJECT_DIR}/lib/python${PYVERSION}/dist-packages
