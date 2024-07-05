@@ -111,32 +111,26 @@ prepare-base-2404:
 #    paths:
 #      - build/reports/linting.xml
 
-.build:
-  stage: build
-  script:
-    - cmake --version
-    - mkdir build && cd build
-    - cmake -DBUILD_TESTING=ON -DBUILD_PYTHON_BINDINGS=ON -DCMAKE_INSTALL_PREFIX=.. -DCMAKE_CXX_FLAGS="-coverage" -DCMAKE_EXE_LINKER_FLAGS="-coverage" ..
-    - make -j`nproc`
-    - make install
-  artifacts:
-    paths:
-      - build
-      - lib
-
-build-2004:
-  extends: [".needs-2004",".build"]
-
-build-2404:
-  extends: [".needs-2404",".build"]
+#.build:
+#  stage: build
+#  script:
+#    - cmake --version
+#    - mkdir build && cd build
+#    - cmake -DBUILD_TESTING=ON -DBUILD_PYTHON_BINDINGS=ON ..
+#    - make -j`nproc`
+#    - make install
+#
+#build-2004:
+#  extends: [".needs-2004",".build"]
+#
+#build-2404:
+#  extends: [".needs-2404",".build"]
 
 .test:
   stage: test
   script:
-    - cd build/
-    # In a test job, newly checked out sources can be more recent than the
-    # build job artifacts, which causes rebuilds in ctest.
-    # Re-running 'make' is more verbose and prevents rebuilds in ctest.
+    - mkdir build && cd build
+    - cmake -DBUILD_TESTING=ON -DBUILD_PYTHON_BINDINGS=ON -DCMAKE_CXX_FLAGS="-coverage" -DCMAKE_EXE_LINKER_FLAGS="-coverage" ..
     - make -j`nproc`
     # Do not run the unittests in parallel, since they would then update
     # .gcda files with coverage information simultaneously.
@@ -149,14 +143,14 @@ build-2404:
 
 test-2004:
   extends: .test
-  needs: ["versioning","build-2004"]
+  needs: ["versioning"]
   image: $BASE_IMAGE_2004
   after_script:
     - gcovr -j`nproc` -e 'external/.*' -e '.*/CompilerIdCXX/.*' -e '.*/test/.*' build/
 
 test-2404:
   extends: .test
-  needs: ["versioning","build-2404"]
+  needs: ["versioning"]
   image: $BASE_IMAGE_2404
   after_script:
     - mkdir -p build/reports
