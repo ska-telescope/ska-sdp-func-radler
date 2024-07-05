@@ -143,6 +143,7 @@ test-2004:
   extends: [".needs-2004",".test"]
   after_script:
     - gcovr -j`nproc` -e 'external/.*' -e '.*/CompilerIdCXX/.*' -e '.*/test/.*' build/
+  coverage: /^TOTAL.*\s+(\d+\%)$/
 
 test-2404:
   extends: [".needs-2404",".test"]
