@@ -164,6 +164,7 @@ test-2404:
     paths:
       - coverage.json
       - build/reports
+      - build
     reports:
       junit: build/reports/unit-tests.xml
       coverage_report:
