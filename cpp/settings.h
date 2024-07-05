@@ -19,12 +19,12 @@ namespace radler {
  * should be used.
  */
 enum class LocalRmsMethod {
-  /// No local RMS
+  /// No local RMS.
   kNone,
-  /// Spatially varying RMS image
+  /// Spatially varying RMS image.
   kRmsWindow,
   /// Spatially varying RMS image with min. Computed as max(window RMS, 0.3 x
-  /// window min)
+  /// window min).
   kRmsAndMinimumWindow
 };
 
@@ -92,27 +92,34 @@ enum class MultiscaleShape {
   kGaussianShape
 };
 
-/// Class to collect and set (Radler) deconvolution related settings
+/// Class to collect and set (Radler) deconvolution related settings.
 struct Settings {
-  /**
-   * @{
-   * Settings that are duplicates from top level settings, and also used outside
-   * deconvolution.
-   */
-  /// Trimmed image width
+  /// Trimmed image width.
   size_t trimmed_image_width = 0;
-  /// Trimmed image height
+
+  /// Trimmed image height.
   size_t trimmed_image_height = 0;
+
+  /**
+   * Number of spectral channels for input and output. This may be higher than
+   * the number of channels used during deconvolution (see the constructor of
+   * @ref WorkTable). If that's the case, channels are interpolated before
+   * deconvolution and extrapolated after (using the @ref spectral_fitting
+   * settings).
+   */
   size_t channels_out = 1;
-  /// Pixel scale in radians
+
+  /// Pixel scale in radians.
   struct PixelScale {
     double x = 0.0;
     double y = 0.0;
   } pixel_scale;
+
+  /// Number of parallel threads used in computations.
   size_t thread_count = aocommon::system::ProcessorCount();
-  /// Prefix for saving various output files (e.g. horizon mask)
+
+  /// Prefix for saving various output files (e.g. horizon mask).
   std::string prefix_name = "wsclean";
-  /** @} */
 
   /**
    * List of polarizations that is integrated over when performing peak finding.
@@ -139,6 +146,7 @@ struct Settings {
 
     /**
      * Number of sub-images to run in parallel. It must be larger than zero.
+     * By default all processor cores will be used.
      */
     size_t max_threads = aocommon::system::ProcessorCount();
   } parallel;
@@ -303,7 +311,7 @@ struct Settings {
 
   /**
    * The filename for storing the horizon mask FITS image.
-   * If unset/empty, Radler uses: prefix_name + "-horizon-mask.fits"
+   * If unset/empty, Radler uses: prefix_name + "-horizon-mask.fits".
    */
   std::string horizon_mask_filename;
 
@@ -354,14 +362,18 @@ struct Settings {
   /** @} */
 
   /**
+   * The algorithm to use: single-scale, multi-scale, etc. This setting
+   * affects the interpretation of some of the other settings.
+   */
+  AlgorithmType algorithm_type = AlgorithmType::kGenericClean;
+
+  /**
    * @{
    * These deconvolution settings are algorithm-specific. For each algorithm
    * type, a single struct holds all algorithm-specific settings for that type.
    */
 
-  AlgorithmType algorithm_type = AlgorithmType::kGenericClean;
-
-  /// Settings specific to python algorithm
+  /// Settings specific to the Python algorithm.
   struct Python {
     /// Path to a python file containing the deconvolution algorithm to be used.
     std::string filename;
@@ -387,7 +399,7 @@ struct Settings {
     std::vector<double> sigma_levels;
   } more_sane;
 
-  /// Settings specific to multiscale algorithm
+  /// Settings specific to multi-scale algorithm.
   struct Multiscale {
     /**
      * Use the fast variant of this algorithm. When @c true, the minor loops are

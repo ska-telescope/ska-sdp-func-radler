@@ -62,13 +62,13 @@ static const char *__doc_radler_LocalRmsMethod =
 R"doc(The value of LocalRmsMethod describes if and how an RMS map should be
 used.)doc";
 
-static const char *__doc_radler_LocalRmsMethod_kNone = R"doc(No local RMS)doc";
+static const char *__doc_radler_LocalRmsMethod_kNone = R"doc(No local RMS.)doc";
 
 static const char *__doc_radler_LocalRmsMethod_kRmsAndMinimumWindow =
 R"doc(Spatially varying RMS image with min. Computed as max(window RMS, 0.3
-x window min))doc";
+x window min).)doc";
 
-static const char *__doc_radler_LocalRmsMethod_kRmsWindow = R"doc(Spatially varying RMS image)doc";
+static const char *__doc_radler_LocalRmsMethod_kRmsWindow = R"doc(Spatially varying RMS image.)doc";
 
 static const char *__doc_radler_MultiscaleShape = R"doc(Shape used in multi-scale deconvolution.)doc";
 
@@ -85,7 +85,7 @@ function that scales with alpha and normalized. This is the function
 used by Cornwell (2008). It can't be used when saving source lists,
 because it is not a fundamental shape allowed in sky models.)doc";
 
-static const char *__doc_radler_Settings = R"doc(Class to collect and set (Radler) deconvolution related settings)doc";
+static const char *__doc_radler_Settings = R"doc(Class to collect and set (Radler) deconvolution related settings.)doc";
 
 static const char *__doc_radler_Settings_Generic = R"doc(Settings not specific to the algorithm)doc";
 
@@ -119,7 +119,7 @@ R"doc(Set of threshold levels provided to MORESANE. The first value is used
 in the first major iteration, the second value in the second major
 iteration, etc.)doc";
 
-static const char *__doc_radler_Settings_Multiscale = R"doc(Settings specific to multiscale algorithm)doc";
+static const char *__doc_radler_Settings_Multiscale = R"doc(Settings specific to multi-scale algorithm.)doc";
 
 static const char *__doc_radler_Settings_Multiscale_convolution_padding =
 R"doc(Controls the padding size of the deconvolution. Higher values should
@@ -176,15 +176,17 @@ static const char *__doc_radler_Settings_Parallel_grid_height = R"doc(Number of 
 
 static const char *__doc_radler_Settings_Parallel_grid_width = R"doc(Number of sub-images in the x direction.)doc";
 
-static const char *__doc_radler_Settings_Parallel_max_threads = R"doc(Number of sub-images to run in parallel. It must be larger than zero.)doc";
+static const char *__doc_radler_Settings_Parallel_max_threads =
+R"doc(Number of sub-images to run in parallel. It must be larger than zero.
+By default all processor cores will be used.)doc";
 
-static const char *__doc_radler_Settings_PixelScale = R"doc(Pixel scale in radians)doc";
+static const char *__doc_radler_Settings_PixelScale = R"doc(Pixel scale in radians.)doc";
 
 static const char *__doc_radler_Settings_PixelScale_x = R"doc()doc";
 
 static const char *__doc_radler_Settings_PixelScale_y = R"doc()doc";
 
-static const char *__doc_radler_Settings_Python = R"doc(Settings specific to python algorithm)doc";
+static const char *__doc_radler_Settings_Python = R"doc(Settings specific to the Python algorithm.)doc";
 
 static const char *__doc_radler_Settings_Python_filename =
 R"doc(Path to a python file containing the deconvolution algorithm to be
@@ -217,9 +219,8 @@ value is 0.0, which means that Radler will keep continuing until
 another criterion (e.g. nr. of iterations) is reached.)doc";
 
 static const char *__doc_radler_Settings_algorithm_type =
-R"doc(@{ These deconvolution settings are algorithm-specific. For each
-algorithm type, a single struct holds all algorithm-specific settings
-for that type.)doc";
+R"doc(The algorithm to use: single-scale, multi-scale, etc. This setting
+affects the interpretation of some of the other settings.)doc";
 
 static const char *__doc_radler_Settings_allow_negative_components =
 R"doc(When set to ``False``, only positive components are cleaned. This is
@@ -262,7 +263,12 @@ static const char *__doc_radler_Settings_casa_mask =
 R"doc(Filename path of a Casa mask file to be used during deconvolution. If
 empty, no Casa mask is used. Do not use together with fits_mask.)doc";
 
-static const char *__doc_radler_Settings_channels_out = R"doc()doc";
+static const char *__doc_radler_Settings_channels_out =
+R"doc(Number of spectral channels for input and output. This may be higher
+than the number of channels used during deconvolution (see the
+constructor of WorkTable). If that's the case, channels are
+interpolated before deconvolution and extrapolated after (using the
+spectral_fitting settings).)doc";
 
 static const char *__doc_radler_Settings_fits_mask =
 R"doc(Filename path of a FITS file containing a mask to be used during
@@ -283,7 +289,7 @@ Leaving the optional value unset disables horizon masking.)doc";
 
 static const char *__doc_radler_Settings_horizon_mask_filename =
 R"doc(The filename for storing the horizon mask FITS image. If unset/empty,
-Radler uses: prefix_name + "-horizon-mask.fits")doc";
+Radler uses: prefix_name + "-horizon-mask.fits".)doc";
 
 static const char *__doc_radler_Settings_linked_polarizations =
 R"doc(List of polarizations that is integrated over when performing peak
@@ -326,7 +332,7 @@ static const char *__doc_radler_Settings_parallel = R"doc()doc";
 
 static const char *__doc_radler_Settings_pixel_scale = R"doc()doc";
 
-static const char *__doc_radler_Settings_prefix_name = R"doc(Prefix for saving various output files (e.g. horizon mask))doc";
+static const char *__doc_radler_Settings_prefix_name = R"doc(Prefix for saving various output files (e.g. horizon mask).)doc";
 
 static const char *__doc_radler_Settings_python = R"doc()doc";
 
@@ -366,15 +372,11 @@ R"doc(When set to ``True``, finding a negative component as the maximum
 (absolute) peak will be a criterion to stop and Radler::Perform() will
 set ``reached_major_threshold``=false.)doc";
 
-static const char *__doc_radler_Settings_thread_count = R"doc()doc";
+static const char *__doc_radler_Settings_thread_count = R"doc(Number of parallel threads used in computations.)doc";
 
-static const char *__doc_radler_Settings_trimmed_image_height = R"doc(Trimmed image height)doc";
+static const char *__doc_radler_Settings_trimmed_image_height = R"doc(Trimmed image height.)doc";
 
-static const char *__doc_radler_Settings_trimmed_image_width =
-R"doc(@{ Settings that are duplicates from top level settings, and also used
-outside deconvolution.
-
-Trimmed image width)doc";
+static const char *__doc_radler_Settings_trimmed_image_width = R"doc(Trimmed image width.)doc";
 
 #if defined(__GNUG__)
 #pragma GCC diagnostic pop
