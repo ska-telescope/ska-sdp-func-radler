@@ -142,14 +142,14 @@ build-2404:
 test-2004:
   extends: [".needs-2004",".test"]
   after_script:
-    - gcovr -e 'external/.*' -e '.*/CompilerIdCXX/.*' -e '.*/test/.*' build/
+    - gcovr -j`nproc` -e 'external/.*' -e '.*/CompilerIdCXX/.*' -e '.*/test/.*' build/
 
 test-2404:
   extends: [".needs-2404",".test"]
   after_script:
     - mkdir -p build/reports
     - scripts/junit-merge.py build/reports/unit-tests.xml $(find build -name unittests_*.xml)
-    - gcovr -e 'external/.*' -e '.*/CompilerIdCXX/.*' -e '.*/test/.*' --xml build/reports/code-coverage.xml --json coverage.json build/
+    - gcovr -j`nproc` -e 'external/.*' -e '.*/CompilerIdCXX/.*' -e '.*/test/.*' --xml build/reports/code-coverage.xml --json coverage.json build/
   artifacts:
     paths:
       - coverage.json
