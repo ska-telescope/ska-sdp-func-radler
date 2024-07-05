@@ -23,3 +23,4 @@ The :code:`radler` module can now be imported in python with:
    :maxdepth: 1
 
    python/settings
+   python/demo
