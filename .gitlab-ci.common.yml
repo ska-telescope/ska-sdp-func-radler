@@ -130,7 +130,7 @@ prepare-base-2404:
   stage: test
   script:
     - mkdir build && cd build
-    - cmake -DBUILD_TESTING=ON -DBUILD_PYTHON_BINDINGS=ON -DCMAKE_CXX_FLAGS="-coverage" -DCMAKE_EXE_LINKER_FLAGS="-coverage" ..
+    - cmake -DBUILD_TESTING=ON -DBUILD_PYTHON_BINDINGS=ON -DCMAKE_CXX_FLAGS="-coverage -fprofile-update=atomic" -DCMAKE_EXE_LINKER_FLAGS="-coverage" ..
     - make -j`nproc`
     # Do not run the unittests in parallel, since they would then update
     # .gcda files with coverage information simultaneously.
@@ -142,20 +142,16 @@ prepare-base-2404:
     - cd && python3 -c "import radler"
 
 test-2004:
-  extends: .test
-  needs: ["versioning"]
-  image: $BASE_IMAGE_2004
+  extends: [".needs-2004",".test"]
   after_script:
-    - gcovr -j`nproc` -e 'external/.*' -e '.*/CompilerIdCXX/.*' -e '.*/test/.*' build/
+    - gcovr -e 'external/.*' -e '.*/CompilerIdCXX/.*' -e '.*/test/.*' build/
 
 test-2404:
-  extends: .test
-  needs: ["versioning"]
-  image: $BASE_IMAGE_2404
+  extends: [".needs-2404",".test"]
   after_script:
     - mkdir -p build/reports
     - scripts/junit-merge.py build/reports/unit-tests.xml $(find build -name unittests_*.xml)
-    - gcovr --verbose -j`nproc` -e 'external/.*' -e '.*/CompilerIdCXX/.*' -e '.*/test/.*' --xml build/reports/code-coverage.xml --json coverage.json build/
+    - gcovr --verbose -e 'external/.*' -e '.*/CompilerIdCXX/.*' -e '.*/test/.*' --xml build/reports/code-coverage.xml --json coverage.json build/
   artifacts:
     paths:
       - coverage.json
