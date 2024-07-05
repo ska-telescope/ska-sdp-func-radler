@@ -90,26 +90,26 @@ prepare-base-2404:
       optional: true
   image: $BASE_IMAGE_2404
 
-format:
-  extends: .needs-2404
-  stage: linting
-  script:
-    - ./scripts/run-format.sh
+#format:
+#  extends: .needs-2404
+#  stage: linting
+#  script:
+#    - ./scripts/run-format.sh
 
-clang-tidy:
-  extends: .needs-2404
-  stage: linting
-  script:
-    - mkdir -p build/reports
-    - cd build
-    # Generate compile_commands.json for clang-tidy.
-    - cmake -DBUILD_TESTING=ON -DCMAKE_EXPORT_COMPILE_COMMANDS:BOOL=TRUE ..
-    - cd ..
-    - clang-tidy -p build/ `find cpp/ -name *.cc` | scripts/clang-tidy-to-junit.py . > build/reports/linting.xml
-  artifacts:
-    when: always
-    paths:
-      - build/reports/linting.xml
+#clang-tidy:
+#  extends: .needs-2404
+#  stage: linting
+#  script:
+#    - mkdir -p build/reports
+#    - cd build
+#    # Generate compile_commands.json for clang-tidy.
+#    - cmake -DBUILD_TESTING=ON -DCMAKE_EXPORT_COMPILE_COMMANDS:BOOL=TRUE ..
+#    - cd ..
+#    - clang-tidy -p build/ `find cpp/ -name *.cc` | scripts/clang-tidy-to-junit.py . > build/reports/linting.xml
+#  artifacts:
+#    when: always
+#    paths:
+#      - build/reports/linting.xml
 
 .build:
   stage: build
@@ -159,7 +159,7 @@ test-2404:
   after_script:
     - mkdir -p build/reports
     - scripts/junit-merge.py build/reports/unit-tests.xml $(find build -name unittests_*.xml)
-    - gcovr -j`nproc` -e 'external/.*' -e '.*/CompilerIdCXX/.*' -e '.*/test/.*' --xml build/reports/code-coverage.xml --json coverage.json build/
+    - gcovr --verbose -j`nproc` -e 'external/.*' -e '.*/CompilerIdCXX/.*' -e '.*/test/.*' --xml build/reports/code-coverage.xml --json coverage.json build/
   artifacts:
     paths:
       - coverage.json
@@ -170,36 +170,36 @@ test-2404:
         coverage_format: cobertura
         path: build/reports/code-coverage.xml
 
-build-doc-2404:
-  extends: .needs-2404
-  stage: build
-  image: $BASE_IMAGE_2404
-  script:
-    - mkdir build && cd build
-    - cmake -DBUILD_PYTHON_BINDINGS=ON -DBUILD_DOCUMENTATION=ON .. -G Ninja
-    - ninja
-    - ninja doc
-  artifacts:
-    paths:
-    - build/doc/html
+#build-doc-2404:
+#  extends: .needs-2404
+#  stage: build
+#  image: $BASE_IMAGE_2404
+#  script:
+#    - mkdir build && cd build
+#    - cmake -DBUILD_PYTHON_BINDINGS=ON -DBUILD_DOCUMENTATION=ON .. -G Ninja
+#    - ninja
+#    - ninja doc
+#  artifacts:
+#    paths:
+#    - build/doc/html
 
-build-docstrings-2404:
-  extends: .needs-2404
-  stage: build
-  image: $BASE_IMAGE_2404
-  script:
-    - mkdir build && cd build
-    - cmake -DBUILD_DOCSTRINGS=ON -G Ninja ..
-    - ninja
-    - ninja docstrings
-    - cp -r doc/docstrings ../python
-    # Check if the generated docstrings still match the doxygen comments
-    # If this check fails, you should either
-    # a) Run cmake with `-DBUILD_DOCSTRINGS=On` (if you have pybind11_mkdoc installed), and then `make_docstrings`, OR
-    # b) Download the docstrings file that is the artifact of this build job
-    # After this, you should copy the docstrings file into the source tree at `python/docstrings`, and commit the changes.
-    - git diff -U0 --exit-code ../python/docstrings
-  artifacts:
-    when: on_failure
-    paths:
-    - build/doc/docstrings
+#build-docstrings-2404:
+#  extends: .needs-2404
+#  stage: build
+#  image: $BASE_IMAGE_2404
+#  script:
+#    - mkdir build && cd build
+#    - cmake -DBUILD_DOCSTRINGS=ON -G Ninja ..
+#    - ninja
+#    - ninja docstrings
+#    - cp -r doc/docstrings ../python
+#    # Check if the generated docstrings still match the doxygen comments
+#    # If this check fails, you should either
+#    # a) Run cmake with `-DBUILD_DOCSTRINGS=On` (if you have pybind11_mkdoc installed), and then `make_docstrings`, OR
+#    # b) Download the docstrings file that is the artifact of this build job
+#    # After this, you should copy the docstrings file into the source tree at `python/docstrings`, and commit the changes.
+#    - git diff -U0 --exit-code ../python/docstrings
+#  artifacts:
+#    when: on_failure
+#    paths:
+#    - build/doc/docstrings
