@@ -114,15 +114,9 @@ clang-tidy:
 .build:
   stage: build
   script:
-    - cmake --version
     - mkdir build && cd build
-    - cmake -DBUILD_TESTING=ON -DBUILD_PYTHON_BINDINGS=ON -DCMAKE_INSTALL_PREFIX=.. -DCMAKE_CXX_FLAGS="-coverage" -DCMAKE_EXE_LINKER_FLAGS="-coverage" ..
+    - cmake -DBUILD_PYTHON_BINDINGS=ON ..
     - make -j`nproc`
-    - make install
-  artifacts:
-    paths:
-      - build
-      - lib
 
 build-2004:
   extends: [".needs-2004",".build"]
@@ -133,12 +127,14 @@ build-2404:
 .test:
   stage: test
   script:
-    - cd build/
-    # In a test job, newly checked out sources can be more recent than the
-    # build job artifacts, which causes rebuilds in ctest.
-    # Re-running 'make' is more verbose and prevents rebuilds in ctest.
-    - make -j`nproc`
-    - ctest -j`nproc` --output-on-failure -T test
+    - mkdir build && cd build
+    # -fprofile-update=atomic avoids race conditions when updating coverage
+    # counters at runtime, and thereby avoids parse errors in gcovr.
+    - cmake -DBUILD_TESTING=ON -DBUILD_PYTHON_BINDINGS=ON -DCMAKE_CXX_FLAGS="-coverage -fprofile-update=atomic" -DCMAKE_EXE_LINKER_FLAGS="-coverage" ..
+    - make -j`nproc` install
+    # Do not run the unittests in parallel, since they would then update
+    # .gcda files with coverage information simultaneously.
+    - ctest --output-on-failure -T test
     # Check whether the python radler modules can be found from the home directory after updating the PYTHONPATH
     - PYVERSION=`python3 --version | grep -P -o ".*\s\K\d+\.\d+(?=\.\d+)"`
     - export PYTHONPATH=${CI_PROJECT_DIR}/lib/python${PYVERSION}/dist-packages
@@ -146,16 +142,13 @@ build-2404:
     - cd && python3 -c "import radler"
 
 test-2004:
-  extends: .test
-  needs: ["versioning","build-2004"]
-  image: $BASE_IMAGE_2004
+  extends: [".needs-2004",".test"]
   after_script:
     - gcovr -j`nproc` -e 'external/.*' -e '.*/CompilerIdCXX/.*' -e '.*/test/.*' build/
+  coverage: /^TOTAL.*\s+(\d+\%)$/
 
 test-2404:
-  extends: .test
-  needs: ["versioning","build-2404"]
-  image: $BASE_IMAGE_2404
+  extends: [".needs-2404",".test"]
   after_script:
     - mkdir -p build/reports
     - scripts/junit-merge.py build/reports/unit-tests.xml $(find build -name unittests_*.xml)
