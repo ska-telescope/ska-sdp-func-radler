@@ -19,6 +19,21 @@
 
 namespace radler::algorithms {
 
+struct SubImage {
+  size_t index;
+  size_t x;
+  size_t y;
+  size_t width;
+  size_t height;
+  // Mask to be used during deconvoution (combines user mask with the
+  // boundary mask)
+  aocommon::UVector<bool> mask;
+  // Selects the pixels inside this subimage
+  aocommon::UVector<bool> boundary_mask;
+  double peak;
+  bool reached_major_threshold;
+};
+
 class ParallelDeconvolution {
  public:
   ParallelDeconvolution(const Settings& settings);
@@ -81,21 +96,6 @@ class ParallelDeconvolution {
       ImageSet& data_image, ImageSet& model_image,
       const std::vector<std::vector<aocommon::Image>>& psf_images,
       const std::vector<PsfOffset>& psf_offsets, bool& reached_major_threshold);
-
-  struct SubImage {
-    size_t index;
-    size_t x;
-    size_t y;
-    size_t width;
-    size_t height;
-    // Mask to be used during deconvoution (combines user mask with the
-    // boundary mask)
-    aocommon::UVector<bool> mask;
-    // Selects the pixels inside this subimage
-    aocommon::UVector<bool> boundary_mask;
-    double peak;
-    bool reached_major_threshold;
-  };
 
   /** @param psf_images @see @ref ImageSet::LoadAndAveragePsfs. */
   void RunSubImage(SubImage& sub_image, ImageSet& data_image,
