@@ -4,11 +4,11 @@
 #define RADLER_ALGORITHMS_SUB_MINOR_LOOP_H_
 
 #include <cstring>
-#include <optional>
 #include <vector>
 
 #include <aocommon/image.h>
 #include <aocommon/logger.h>
+#include <aocommon/optionalnumber.h>
 
 #include "component_list.h"
 #include "image_set.h"
@@ -174,7 +174,7 @@ class SubMinorLoop {
 
   float FluxCleaned() const { return _fluxCleaned; }
 
-  std::optional<float> Run(
+  aocommon::OptionalNumber<float> Run(
       ImageSet& convolvedResidual,
       const std::vector<aocommon::Image>& twiceConvolvedPsfs);
 

@@ -10,6 +10,7 @@
 #include "algorithms/threaded_deconvolution_tools.h"
 #include "math/peak_finder.h"
 
+using aocommon::OptionalNumber;
 using aocommon::units::FluxDensity;
 
 namespace radler::algorithms {
@@ -45,7 +46,7 @@ DeconvolutionResult GenericClean::ExecuteMajorIteration(
   dirty_set.GetLinearIntegrated(integrated);
   size_t componentX = 0;
   size_t componentY = 0;
-  std::optional<float> maxValue =
+  OptionalNumber<float> maxValue =
       FindPeak(integrated, scratchA.Data(), componentX, componentY);
   DeconvolutionResult result;
   if (!maxValue) {
@@ -186,9 +187,9 @@ DeconvolutionResult GenericClean::ExecuteMajorIteration(
   return result;
 }
 
-std::optional<float> GenericClean::FindPeak(const aocommon::Image& image,
-                                            float* scratch_buffer, size_t& x,
-                                            size_t& y) {
+OptionalNumber<float> GenericClean::FindPeak(const aocommon::Image& image,
+                                             float* scratch_buffer, size_t& x,
+                                             size_t& y) {
   const float* actual_image = image.Data();
   if (!RmsFactorImage().Empty()) {
     std::copy_n(image.Data(), image.Size(), scratch_buffer);

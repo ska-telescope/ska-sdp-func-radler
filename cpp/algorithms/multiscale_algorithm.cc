@@ -3,11 +3,11 @@
 #include "algorithms/multiscale_algorithm.h"
 
 #include <memory>
-#include <optional>
 #include <set>
 
 #include <aocommon/image.h>
 #include <aocommon/logger.h>
+#include <aocommon/optionalnumber.h>
 #include <aocommon/units/fluxdensity.h>
 
 #include "component_list.h"
@@ -547,9 +547,9 @@ void MultiScaleAlgorithm::FindActiveScaleConvolvedMaxima(
   for (size_t i = 0; i != results.size(); ++i) {
     ScaleInfo& scaleEntry = scale_infos_[transformIndices[i]];
     scaleEntry.max_normalized_image_value =
-        results[i].normalized_value.value_or(0.0);
+        results[i].normalized_value.ValueOr(0.0);
     scaleEntry.max_unnormalized_image_value =
-        results[i].unnormalized_value.value_or(0.0);
+        results[i].unnormalized_value.ValueOr(0.0);
     scaleEntry.max_image_value_x = results[i].x;
     scaleEntry.max_image_value_y = results[i].y;
     if (report_rms) scaleEntry.rms = results[i].rms;
@@ -667,7 +667,7 @@ void MultiScaleAlgorithm::FindPeakDirect(const aocommon::Image& image,
     actualImage = scratch.Data();
   }
 
-  std::optional<float> maxValue;
+  aocommon::OptionalNumber<float> maxValue;
   if (use_per_scale_masks_) {
     maxValue = math::peak_finder::FindWithMask(
         actualImage, image.Width(), image.Height(), scaleInfo.max_image_value_x,

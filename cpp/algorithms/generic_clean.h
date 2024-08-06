@@ -3,8 +3,7 @@
 #ifndef RADLER_GENERIC_CLEAN_H_
 #define RADLER_GENERIC_CLEAN_H_
 
-#include <optional>
-
+#include <aocommon/optionalnumber.h>
 #include <aocommon/uvector.h>
 
 #include "image_set.h"
@@ -43,8 +42,9 @@ class GenericClean final : public DeconvolutionAlgorithm {
 
   // Scratch buffer should at least accomodate space for image.Size() floats
   // and is only used to avoid unnecessary memory allocations.
-  std::optional<float> FindPeak(const aocommon::Image& image,
-                                float* scratch_buffer, size_t& x, size_t& y);
+  aocommon::OptionalNumber<float> FindPeak(const aocommon::Image& image,
+                                           float* scratch_buffer, size_t& x,
+                                           size_t& y);
 };
 }  // namespace radler::algorithms
 #endif
