@@ -27,9 +27,9 @@ GenericClean::GenericClean(bool use_sub_minor_optimization)
     : convolution_padding_(1.1),
       use_sub_minor_optimization_(use_sub_minor_optimization) {}
 
-float GenericClean::ExecuteMajorIteration(
+DeconvolutionResult GenericClean::ExecuteMajorIteration(
     ImageSet& dirty_set, ImageSet& model_set,
-    const std::vector<aocommon::Image>& psfs, bool& reached_major_threshold) {
+    const std::vector<aocommon::Image>& psfs) {
   const size_t width = dirty_set.Width();
   const size_t height = dirty_set.Height();
   const size_t iterationCounterAtStart = IterationNumber();
@@ -47,10 +47,11 @@ float GenericClean::ExecuteMajorIteration(
   size_t componentY = 0;
   std::optional<float> maxValue =
       FindPeak(integrated, scratchA.Data(), componentX, componentY);
+  DeconvolutionResult result;
   if (!maxValue) {
     LogReceiver().Info << "No peak found.\n";
-    reached_major_threshold = false;
-    return 0.0;
+    result.another_iteration_required = false;
+    return result;
   }
   LogReceiver().Info << "Initial peak: "
                      << peakDescription(integrated, componentX, componentY)
@@ -175,14 +176,14 @@ float GenericClean::ExecuteMajorIteration(
       LogReceiver().Info << "the minor-loop threshold was reached. Continuing "
                             "cleaning after inversion/prediction round.\n";
     }
-    reached_major_threshold =
+    result.another_iteration_required =
         mgainReached && didWork && !negativeReached && !finalThresholdReached;
-    return *maxValue;
+    result.final_peak_value = *maxValue;
   } else {
     LogReceiver().Info << "Deconvolution aborted.\n";
-    reached_major_threshold = false;
-    return 0.0;
+    result.another_iteration_required = false;
   }
+  return result;
 }
 
 std::optional<float> GenericClean::FindPeak(const aocommon::Image& image,

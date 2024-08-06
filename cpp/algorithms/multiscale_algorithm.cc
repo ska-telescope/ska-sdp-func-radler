@@ -51,10 +51,9 @@ MultiScaleAlgorithm::~MultiScaleAlgorithm() {
                          << FluxDensity::ToNiceString(sumFlux) << ")\n";
 }
 
-float MultiScaleAlgorithm::ExecuteMajorIteration(
+DeconvolutionResult MultiScaleAlgorithm::ExecuteMajorIteration(
     ImageSet& data_image, ImageSet& model_image,
-    const std::vector<aocommon::Image>& psf_images,
-    bool& reached_major_threshold) {
+    const std::vector<aocommon::Image>& psf_images) {
   // Rough overview of the procedure:
   // Convolve integrated image (all scales)
   // Find integrated peak & scale
@@ -142,11 +141,12 @@ float MultiScaleAlgorithm::ExecuteMajorIteration(
   size_t scaleWithPeak;
   FindActiveScaleConvolvedMaxima(data_image, integratedScratch, scratch, true,
                                  tools);
+  DeconvolutionResult result;
   if (!SelectMaximumScale(scaleWithPeak)) {
     LogReceiver().Warn << "No peak found during multi-scale cleaning! Aborting "
                           "deconvolution.\n";
-    reached_major_threshold = false;
-    return 0.0;
+    result.another_iteration_required = false;
+    return result;
   }
 
   bool isFinalThreshold = false;
@@ -361,8 +361,8 @@ float MultiScaleAlgorithm::ExecuteMajorIteration(
     if (!SelectMaximumScale(scaleWithPeak)) {
       LogReceiver().Warn << "No peak found in main loop of multi-scale "
                             "cleaning! Aborting deconvolution.\n";
-      reached_major_threshold = false;
-      return 0.0;
+      result.another_iteration_required = false;
+      return result;
     }
 
     LogReceiver().Info
@@ -397,10 +397,12 @@ float MultiScaleAlgorithm::ExecuteMajorIteration(
                           "inversion/prediction round.\n";
   }
 
-  reached_major_threshold =
+  result.another_iteration_required =
       !maxIterReached && !isFinalThreshold && !negativeReached;
-  return scale_infos_[scaleWithPeak].max_unnormalized_image_value *
-         scale_infos_[scaleWithPeak].bias_factor;
+  result.final_peak_value =
+      scale_infos_[scaleWithPeak].max_unnormalized_image_value *
+      scale_infos_[scaleWithPeak].bias_factor;
+  return result;
 }
 
 void MultiScaleAlgorithm::InitializeScaleInfo(size_t min_width_height) {

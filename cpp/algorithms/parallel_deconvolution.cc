@@ -374,8 +374,12 @@ void ParallelDeconvolution::RunSubImage(
     }
   }
 
-  sub_image.peak = algorithms_[sub_image.index]->ExecuteMajorIteration(
-      *sub_data, *sub_model, sub_psfs, sub_image.reached_major_threshold);
+  const DeconvolutionResult result =
+      algorithms_[sub_image.index]->ExecuteMajorIteration(*sub_data, *sub_model,
+                                                          sub_psfs);
+
+  sub_image.peak = result.final_peak_value;
+  sub_image.reached_major_threshold = result.another_iteration_required;
 
   // Since this was an RMS image specifically for this subimage size, we free it
   // immediately
@@ -479,9 +483,9 @@ void ParallelDeconvolution::ExecuteSingleThreadedRun(
                            first_psf_image.Height() != data_image.Height();
 
   if (!resize_psfs) {
-    algorithm.ExecuteMajorIteration(data_image, model_image,
-                                    psf_images[psf_image_index],
-                                    reached_major_threshold);
+    const DeconvolutionResult result = algorithm.ExecuteMajorIteration(
+        data_image, model_image, psf_images[psf_image_index]);
+    reached_major_threshold = result.another_iteration_required;
   } else {
     // When using direction-dependent PSFs, the PSFs can only be smaller.
     assert(first_psf_image.Width() <= data_image.Width());
@@ -492,8 +496,9 @@ void ParallelDeconvolution::ExecuteSingleThreadedRun(
       resized_psf_images.push_back(
           psf_image.Untrim(data_image.Width(), data_image.Height()));
     }
-    algorithm.ExecuteMajorIteration(data_image, model_image, resized_psf_images,
-                                    reached_major_threshold);
+    const DeconvolutionResult result = algorithm.ExecuteMajorIteration(
+        data_image, model_image, resized_psf_images);
+    reached_major_threshold = result.another_iteration_required;
   }
 }
 

@@ -35,9 +35,9 @@ class MultiScaleAlgorithm final : public DeconvolutionAlgorithm {
     return std::make_unique<MultiScaleAlgorithm>(*this);
   }
 
-  float ExecuteMajorIteration(ImageSet& data_image, ImageSet& model_image,
-                              const std::vector<aocommon::Image>& psf_images,
-                              bool& reached_major_threshold) final;
+  DeconvolutionResult ExecuteMajorIteration(
+      ImageSet& data_image, ImageSet& model_image,
+      const std::vector<aocommon::Image>& psf_images) final;
 
   void SetAutoMaskMode(bool track_per_scale_masks, bool use_per_scale_masks) {
     track_per_scale_masks_ = track_per_scale_masks;

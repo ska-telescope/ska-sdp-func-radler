@@ -3,8 +3,9 @@
 #ifndef RADLER_ALGORITHMS_DECONVOLUTION_ALGORITHM_H_
 #define RADLER_ALGORITHMS_DECONVOLUTION_ALGORITHM_H_
 
-#include <string>
 #include <cmath>
+#include <limits>
+#include <string>
 
 #include <aocommon/image.h>
 #include <aocommon/logger.h>
@@ -17,6 +18,34 @@
 
 namespace radler::algorithms {
 
+/**
+ * Class to capture information returned by
+ * @ref DeconvolutionAlgorithm::ExecuteMajorIteration().
+ */
+struct DeconvolutionResult {
+  /**
+   * The peak (in Jy) of the highest residual value, or zero if unknown
+   * or irrelevant.
+   */
+  float final_peak_value = 0.0;
+  /**
+   * A value of @c true indicates that the function should be called again
+   * after a predict-inversion round. This is e.g. the case when the major
+   * iteration threshold was reached of a clean algorithm.
+   */
+  bool another_iteration_required = false;
+  /**
+   * If @c true, the results of this iteration are worse than at the start.
+   * With clean algorithms, this happens when the peak value is (significantly)
+   * higher than at the start. If @c true, @ref another_iteration_required
+   * should normally be @c false indicating no progress is made. When using
+   * parallel deconvolution, a value of @c true will cause the results of the
+   * diverging sub-image to be reset. See also:
+   * @ref Settings::divergence_limit .
+   */
+  bool is_diverging = false;
+};
+
 class DeconvolutionAlgorithm {
  public:
   virtual ~DeconvolutionAlgorithm() = default;
@@ -26,10 +55,9 @@ class DeconvolutionAlgorithm {
   DeconvolutionAlgorithm(DeconvolutionAlgorithm&&) = delete;
   DeconvolutionAlgorithm& operator=(DeconvolutionAlgorithm&&) = delete;
 
-  virtual float ExecuteMajorIteration(
+  virtual DeconvolutionResult ExecuteMajorIteration(
       ImageSet& data_image, ImageSet& model_image,
-      const std::vector<aocommon::Image>& psf_images,
-      bool& reached_major_threshold) = 0;
+      const std::vector<aocommon::Image>& psf_images) = 0;
 
   virtual std::unique_ptr<DeconvolutionAlgorithm> Clone() const = 0;
 

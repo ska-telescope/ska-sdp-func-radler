@@ -27,9 +27,9 @@ class GenericClean final : public DeconvolutionAlgorithm {
   GenericClean& operator=(const GenericClean&) = delete;
   GenericClean& operator=(GenericClean&&) = delete;
 
-  float ExecuteMajorIteration(ImageSet& dirty_set, ImageSet& model_set,
-                              const std::vector<aocommon::Image>& psfs,
-                              bool& reached_major_threshold) final;
+  DeconvolutionResult ExecuteMajorIteration(
+      ImageSet& dirty_set, ImageSet& model_set,
+      const std::vector<aocommon::Image>& psfs) final;
 
   std::unique_ptr<DeconvolutionAlgorithm> Clone() const final {
     return std::make_unique<GenericClean>(*this);

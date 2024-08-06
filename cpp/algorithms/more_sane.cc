@@ -67,10 +67,9 @@ void MoreSane::ExecuteMajorIteration(float* residual_data, float* model_data,
   unlink((outputName + "_residual.fits").c_str());
 }
 
-float MoreSane::ExecuteMajorIteration(
+DeconvolutionResult MoreSane::ExecuteMajorIteration(
     ImageSet& data_image, ImageSet& model_image,
-    const std::vector<aocommon::Image>& psf_images,
-    bool& reached_major_threshold) {
+    const std::vector<aocommon::Image>& psf_images) {
   for (size_t i = 0; i != data_image.Size(); ++i) {
     float* residual_data = data_image.Data(i);
     float* model_data = model_image.Data(i);
@@ -80,7 +79,8 @@ float MoreSane::ExecuteMajorIteration(
 
   SetIterationNumber(IterationNumber() + 1);
 
-  reached_major_threshold = IterationNumber() < MaxIterations();
-  return 0.0;
+  DeconvolutionResult result;
+  result.another_iteration_required = IterationNumber() < MaxIterations();
+  return result;
 }
 }  // namespace radler::algorithms

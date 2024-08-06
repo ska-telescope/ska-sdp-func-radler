@@ -92,15 +92,13 @@ int main(int argc, char* argv[]) {
     const bool trackComponents = false;
     const bool allowNegativeComponents = true;
     const double borderRatio = 0.05;
-    bool reachedThreshold = false;
 
     radler::algorithms::MultiScaleAlgorithm algorithm(
         settings, beamScale, imgReader.PixelSizeX(), imgReader.PixelSizeY(),
         trackComponents);
     algorithm.SetAllowNegativeComponents(allowNegativeComponents);
     algorithm.SetCleanBorderRatio(borderRatio);
-    algorithm.ExecuteMajorIteration(residualSet, modelSet, {psf},
-                                    reachedThreshold);
+    algorithm.ExecuteMajorIteration(residualSet, modelSet, {psf});
 
     residualSet.AssignAndStoreResidual();
     modelSet.InterpolateAndStoreModel(schaapcommon::fitters::SpectralFitter(
