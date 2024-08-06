@@ -270,6 +270,12 @@ constructor of WorkTable). If that's the case, channels are
 interpolated before deconvolution and extrapolated after (using the
 spectral_fitting settings).)doc";
 
+static const char *__doc_radler_Settings_divergence_limit =
+R"doc(If in one major iteration the peak raises by this factor, the
+iteration is considered to be diverging. When using parallel
+deconvolution, a diverged subimage is reset; after the major
+iteration, to its state as before the major iteration.)doc";
+
 static const char *__doc_radler_Settings_fits_mask =
 R"doc(Filename path of a FITS file containing a mask to be used during
 deconvolution. If empty, no FITS mask is used.)doc";

@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <memory>
+#include <sstream>
 
 #include <aocommon/dynamicfor.h>
 #include <aocommon/units/fluxdensity.h>
@@ -374,6 +375,8 @@ void ParallelDeconvolution::RunSubImage(
     }
   }
 
+  const double peak_at_start = std::fabs(sub_image.peak);
+
   const DeconvolutionResult result =
       algorithms_[sub_image.index]->ExecuteMajorIteration(*sub_data, *sub_model,
                                                           sub_psfs);
@@ -381,11 +384,29 @@ void ParallelDeconvolution::RunSubImage(
   sub_image.peak = result.final_peak_value;
   sub_image.reached_major_threshold = result.another_iteration_required;
 
+  // When diverging, a warning is displayed and the results of this sub-image
+  // are not written back to the full image.
+  const bool converging = (settings_.divergence_limit == 0.0 ||
+                           std::fabs(sub_image.peak) <=
+                               peak_at_start * settings_.divergence_limit) &&
+                          std::isfinite(sub_image.peak) && !result.is_diverging;
+  if (!converging && !find_peak_only) {
+    std::ostringstream warning_str;
+    warning_str << "Sub-image " << sub_image.index << " has a peak of "
+                << sub_image.peak
+                << " and deconvolution probably diverged: resetting.\n";
+    aocommon::Logger::Warn << warning_str.str();
+
+    // As we are diverging, this sub-image should not cause a new major
+    // iteration
+    sub_image.reached_major_threshold = false;
+  }
+
   // Since this was an RMS image specifically for this subimage size, we free it
   // immediately
   algorithms_[sub_image.index]->SetRmsFactorImage(Image());
 
-  if (track_per_scale_masks_) {
+  if (track_per_scale_masks_ && converging && !find_peak_only) {
     const std::lock_guard<std::mutex> lock(mutex);
     MultiScaleAlgorithm& multi_scale_algorithm =
         static_cast<class MultiScaleAlgorithm&>(*algorithms_[sub_image.index]);
@@ -395,7 +416,7 @@ void ParallelDeconvolution::RunSubImage(
         scale_masks_.emplace_back(width, height);
       }
     }
-    Logger::Debug << "Compressing scale dependent masks...\n";
+    Logger::Debug << "Compressing scale-dependent masks...\n";
     for (size_t scale_index = 0;
          scale_index != multi_scale_algorithm.ScaleCount(); ++scale_index) {
       const aocommon::UVector<bool>& ms_mask =
@@ -427,21 +448,23 @@ void ParallelDeconvolution::RunSubImage(
 
   if (settings_.save_source_list &&
       settings_.algorithm_type == AlgorithmType::kMultiscale) {
-    const std::lock_guard<std::mutex> lock(mutex);
     MultiScaleAlgorithm& algorithm =
         static_cast<MultiScaleAlgorithm&>(*algorithms_[sub_image.index]);
-    if (!component_list_) {
-      component_list_ = std::make_unique<ComponentList>(
-          width, height, algorithm.ScaleCount(), data_image.Size());
+    if (converging) {
+      const std::lock_guard<std::mutex> lock(mutex);
+      if (!component_list_) {
+        component_list_ = std::make_unique<ComponentList>(
+            width, height, algorithm.ScaleCount(), data_image.Size());
+      }
+      component_list_->Add(algorithm.GetComponentList(), sub_image.x,
+                           sub_image.y);
     }
-    component_list_->Add(algorithm.GetComponentList(), sub_image.x,
-                         sub_image.y);
     algorithm.ClearComponentList();
   }
 
   if (find_peak_only) {
     algorithms_[sub_image.index]->SetMaxIterations(max_n_iter);
-  } else {
+  } else if (converging) {
     const std::lock_guard<std::mutex> lock(mutex);
     data_image.CopyMasked(*sub_data, sub_image.x, sub_image.y,
                           sub_image.boundary_mask.data());

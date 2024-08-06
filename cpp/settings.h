@@ -298,6 +298,14 @@ struct Settings {
   std::string casa_mask;
 
   /**
+   * If in one major iteration the peak raises by this factor, the
+   * iteration is considered to be diverging. When using parallel
+   * deconvolution, a diverged subimage is reset; after the major
+   * iteration, to its state as before the major iteration.
+   */
+  double divergence_limit = 4.0;
+
+  /**
    * The horizon mask distance allows masking out emission beyond the horizon.
    * The value is a floating point value in radians.
    *
