@@ -150,10 +150,10 @@ DeconvolutionResult MultiScaleAlgorithm::ExecuteMajorIteration(
   }
 
   bool isFinalThreshold = false;
-  float mGainThreshold =
+  const float initial_peak_value =
       std::fabs(scale_infos_[scaleWithPeak].max_unnormalized_image_value *
-                scale_infos_[scaleWithPeak].bias_factor) *
-      (1.0 - MajorLoopGain());
+                scale_infos_[scaleWithPeak].bias_factor);
+  float mGainThreshold = initial_peak_value * (1.0 - MajorLoopGain());
   mGainThreshold = std::max(mGainThreshold, MajorIterationThreshold());
   float firstThreshold = mGainThreshold;
   if (Threshold() > firstThreshold) {
@@ -172,6 +172,7 @@ DeconvolutionResult MultiScaleAlgorithm::ExecuteMajorIteration(
   LogReceiver().Info << '\n';
 
   ImageSet individualConvolvedImages(data_image, width, height);
+  bool diverging = false;
 
   //
   // The minor iteration loop
@@ -181,7 +182,7 @@ DeconvolutionResult MultiScaleAlgorithm::ExecuteMajorIteration(
                    scale_infos_[scaleWithPeak].bias_factor) > firstThreshold &&
          (!StopOnNegativeComponents() ||
           scale_infos_[scaleWithPeak].max_unnormalized_image_value >= 0.0) &&
-         thresholdCountdown > 0) {
+         thresholdCountdown > 0 && !diverging) {
     // Create double-convolved PSFs & individually convolved images for this
     // scale
     std::vector<Image> transformList;
@@ -242,6 +243,7 @@ DeconvolutionResult MultiScaleAlgorithm::ExecuteMajorIteration(
           firstSubIterationThreshold / scale_infos_[scaleWithPeak].bias_factor,
           subIterationGainThreshold / scale_infos_[scaleWithPeak].bias_factor);
       subLoop.SetGain(scale_infos_[scaleWithPeak].gain);
+      subLoop.SetDivergenceLimit(DivergenceLimit());
       subLoop.SetAllowNegativeComponents(AllowNegativeComponents());
       subLoop.SetStopOnNegativeComponent(StopOnNegativeComponents());
       const size_t scaleBorder = ceil(scale_infos_[scaleWithPeak].scale * 0.5);
@@ -259,7 +261,13 @@ DeconvolutionResult MultiScaleAlgorithm::ExecuteMajorIteration(
       }
       subLoop.SetParentAlgorithm(this);
 
-      subLoop.Run(individualConvolvedImages, twiceConvolvedPSFs);
+      aocommon::OptionalNumber<float> peak_value;
+      std::tie(diverging, peak_value) =
+          subLoop.Run(individualConvolvedImages, twiceConvolvedPSFs);
+      if (DivergenceLimit() != 0.0 && peak_value) {
+        diverging = diverging || std::fabs(*peak_value) >
+                                     initial_peak_value * DivergenceLimit();
+      }
 
       SetIterationNumber(subLoop.CurrentIteration());
       scale_infos_[scaleWithPeak].n_components_cleaned +=
@@ -297,14 +305,15 @@ DeconvolutionResult MultiScaleAlgorithm::ExecuteMajorIteration(
         }
       }
 
-    } else {  // don't use the Clark optimization
+    } else {  // don't use the sub-minor optimization
       const ScaleInfo& maxScaleInfo = scale_infos_[scaleWithPeak];
       while (
           IterationNumber() < MaxIterations() &&
           std::fabs(maxScaleInfo.max_unnormalized_image_value *
                     maxScaleInfo.bias_factor) > firstSubIterationThreshold &&
           (!StopOnNegativeComponents() ||
-           scale_infos_[scaleWithPeak].max_unnormalized_image_value >= 0.0)) {
+           scale_infos_[scaleWithPeak].max_unnormalized_image_value >= 0.0) &&
+          !diverging) {
         aocommon::UVector<float> componentValues;
         MeasureComponentValues(componentValues, scaleWithPeak,
                                individualConvolvedImages);
@@ -342,12 +351,13 @@ DeconvolutionResult MultiScaleAlgorithm::ExecuteMajorIteration(
         // Find maximum for this scale
         individualConvolvedImages.GetLinearIntegrated(integratedScratch);
         FindPeakDirect(integratedScratch, scratch, scaleWithPeak);
-        LogReceiver().Debug
-            << "Scale now "
-            << std::fabs(
-                   scale_infos_[scaleWithPeak].max_unnormalized_image_value *
-                   scale_infos_[scaleWithPeak].bias_factor)
-            << '\n';
+        const float abs_peak_value =
+            std::fabs(scale_infos_[scaleWithPeak].max_unnormalized_image_value *
+                      scale_infos_[scaleWithPeak].bias_factor);
+        LogReceiver().Debug << "Scale now " << abs_peak_value << '\n';
+        if (DivergenceLimit() != 0.0) {
+          diverging = abs_peak_value > initial_peak_value * DivergenceLimit();
+        }
 
         SetIterationNumber(IterationNumber() + 1);
       }
@@ -375,15 +385,17 @@ DeconvolutionResult MultiScaleAlgorithm::ExecuteMajorIteration(
         << scale_infos_[scaleWithPeak].max_image_value_y << '\n';
   }
 
-  bool maxIterReached = IterationNumber() >= MaxIterations(),
-       negativeReached =
-           StopOnNegativeComponents() &&
-           scale_infos_[scaleWithPeak].max_unnormalized_image_value < 0.0;
+  const bool maxIterReached = IterationNumber() >= MaxIterations();
+  const bool negativeReached =
+      StopOnNegativeComponents() &&
+      scale_infos_[scaleWithPeak].max_unnormalized_image_value < 0.0;
   // finalThresholdReached =
   // std::fabs(scale_infos_[scaleWithPeak].max_unnormalized_image_value *
   // scale_infos_[scaleWithPeak].bias_factor) <= threshold_;
 
-  if (maxIterReached) {
+  if (diverging) {
+    LogReceiver().Warn << "WARNING: Multiscale clean diverged.\n";
+  } else if (maxIterReached) {
     LogReceiver().Info << "Cleaning finished because maximum number of "
                           "iterations was reached.\n";
   } else if (negativeReached) {
@@ -397,8 +409,9 @@ DeconvolutionResult MultiScaleAlgorithm::ExecuteMajorIteration(
                           "inversion/prediction round.\n";
   }
 
+  result.is_diverging = diverging;
   result.another_iteration_required =
-      !maxIterReached && !isFinalThreshold && !negativeReached;
+      !maxIterReached && !isFinalThreshold && !negativeReached && !diverging;
   result.final_peak_value =
       scale_infos_[scaleWithPeak].max_unnormalized_image_value *
       scale_infos_[scaleWithPeak].bias_factor;

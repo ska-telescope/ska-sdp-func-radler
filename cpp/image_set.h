@@ -54,6 +54,20 @@ class ImageSet {
   void SetImages(ImageSet&& source);
 
   /**
+   * Replace all images. The input array should have the same number of images
+   * and each image should have the same dimensions as the images already
+   * stored.
+   */
+  void SetImages(std::vector<aocommon::Image>&& images) {
+    assert(images.size() == images_.size());
+    // We could move the whole vector at once but this way each image is
+    // checked.
+    for (size_t image_index = 0; image_index != images_.size(); ++image_index) {
+      SetImage(image_index, std::move(images[image_index]));
+    }
+  }
+
+  /**
    * @param use_residual_images: True: Load residual images. False: Load model
    * images.
    */
@@ -181,6 +195,8 @@ class ImageSet {
   const aocommon::Image& operator[](size_t index) const {
     return images_[index];
   }
+
+  const std::vector<aocommon::Image>& Images() const { return images_; }
 
   size_t Size() const { return images_.size(); }
 

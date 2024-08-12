@@ -95,6 +95,10 @@ class DeconvolutionAlgorithm {
     settings_.clean_mask = clean_mask;
   }
 
+  void SetDivergenceLimit(float divergence_limit) {
+    settings_.divergence_limit = divergence_limit;
+  }
+
   void SetLogReceiver(aocommon::LogReceiver& log_receiver) {
     log_receiver_ = &log_receiver;
   }
@@ -116,6 +120,8 @@ class DeconvolutionAlgorithm {
   const bool* CleanMask() const { return settings_.clean_mask; }
 
   size_t IterationNumber() const { return iteration_number_; }
+
+  float DivergenceLimit() const { return settings_.divergence_limit; }
 
   void SetIterationNumber(size_t iteration_number) {
     iteration_number_ = iteration_number;
@@ -167,6 +173,7 @@ class DeconvolutionAlgorithm {
     float major_loop_gain = 1.0;
     float clean_border_ratio = 0.05;
     size_t max_iterations = 500;
+    float divergence_limit = 4.0;
     bool allow_negative_components = true;
     bool stop_on_negative_component = false;
     const bool* clean_mask = nullptr;

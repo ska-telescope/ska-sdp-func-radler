@@ -298,10 +298,9 @@ struct Settings {
   std::string casa_mask;
 
   /**
-   * If in one major iteration the peak raises by this factor, the
-   * iteration is considered to be diverging. When using parallel
-   * deconvolution, a diverged subimage is reset; after the major
-   * iteration, to its state as before the major iteration.
+   * If in one major iteration the peak raises by this factor, the iteration is
+   * considered to be diverging. When parallel deconvolution is used, a diverged
+   * subimage that diverges is reset to its state before the major iteration.
    */
   double divergence_limit = 4.0;
 

@@ -48,6 +48,7 @@ BOOST_AUTO_TEST_CASE(divergence) {
   settings.parallel.grid_height = kSubImageGridSize;
   settings.divergence_limit = 4.0;
   settings.algorithm_type = AlgorithmType::kGenericClean;
+  settings.save_source_list = true;
 
   const size_t center_pixel = (kHeight / 2) * kWidth + (kWidth / 2);
 
@@ -133,6 +134,11 @@ BOOST_AUTO_TEST_CASE(divergence) {
       }
     }
   }
+
+  const ComponentList list = radler.GetComponentList();
+  // We expect 2 sources in every sub-image, except in the diverged one:
+  BOOST_REQUIRE_EQUAL(list.ComponentCount(0),
+                      kSubImageGridSize * kSubImageGridSize * 2 - 2);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

@@ -359,6 +359,7 @@ void Radler::InitializeDeconvolutionAlgorithm(
   algorithm->SetMinorLoopGain(settings_.minor_loop_gain);
   algorithm->SetMajorLoopGain(settings_.major_loop_gain);
   algorithm->SetCleanBorderRatio(settings_.border_ratio);
+  algorithm->SetDivergenceLimit(settings_.divergence_limit);
   algorithm->SetAllowNegativeComponents(settings_.allow_negative_components);
   algorithm->SetStopOnNegativeComponents(settings_.stop_on_negative_components);
   const size_t n_polarizations = table_->OriginalGroups().front().size();

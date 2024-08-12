@@ -35,7 +35,7 @@ size_t SubMinorModel::GetMaxComponent(Image& scratch, float& max_value) const {
   return maxComponent;
 }
 
-aocommon::OptionalNumber<float> SubMinorLoop::Run(
+std::pair<bool, aocommon::OptionalNumber<float>> SubMinorLoop::Run(
     ImageSet& convolvedResidual,
     const std::vector<aocommon::Image>& twiceConvolvedPsfs) {
   _subMinorModel = SubMinorModel(_width, _height);
@@ -49,16 +49,19 @@ aocommon::OptionalNumber<float> SubMinorLoop::Run(
   _logReceiver.Debug << "Number of components selected > " << _threshold << ": "
                      << _subMinorModel.size() << '\n';
 
-  if (_subMinorModel.size() == 0) return {};
+  if (_subMinorModel.size() == 0) {
+    return std::make_pair(false, aocommon::OptionalNumber<float>());
+  }
 
   Image scratch(_subMinorModel.size(), 1);
   float maxValue;
   size_t maxComponent = _subMinorModel.GetMaxComponent(
       scratch, maxValue, _allowNegativeComponents);
-
+  const float max_value_at_start = std::fabs(maxValue);
+  bool diverging = false;
   while (std::fabs(maxValue) > _threshold &&
          _currentIteration < _maxIterations &&
-         (!_stopOnNegativeComponent || maxValue >= 0.0)) {
+         (!_stopOnNegativeComponent || maxValue >= 0.0) && !diverging) {
     aocommon::UVector<float> componentValues(_subMinorModel.Residual().Size());
     for (size_t imgIndex = 0; imgIndex != _subMinorModel.Residual().Size();
          ++imgIndex) {
@@ -103,9 +106,14 @@ aocommon::OptionalNumber<float> SubMinorLoop::Run(
 
     maxComponent = _subMinorModel.GetMaxComponent(scratch, maxValue,
                                                   _allowNegativeComponents);
+
+    if (_divergenceLimit != 0.0) {
+      diverging = std::fabs(maxValue) > max_value_at_start * _divergenceLimit;
+    }
+
     ++_currentIteration;
   }
-  return aocommon::OptionalNumber<float>(maxValue);
+  return std::make_pair(diverging, aocommon::OptionalNumber<float>(maxValue));
 }
 
 void SubMinorModel::MakeSets(const ImageSet& residual_set) {

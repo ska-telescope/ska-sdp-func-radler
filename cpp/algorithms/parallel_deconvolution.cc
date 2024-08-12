@@ -305,6 +305,10 @@ void ParallelDeconvolution::RunSubImage(
         sub_image.y + sub_image.height, width, sub_image.boundary_mask.data());
   }
 
+  // Make a copy of the images at the start to be able to undo the results of
+  // deconvolution if it diverges.
+  std::vector<aocommon::Image> initial_model_images = sub_model->Images();
+
   // Construct the smaller psfs
   std::vector<Image> sub_psfs;
   sub_psfs.reserve(psf_images.size());
@@ -392,8 +396,10 @@ void ParallelDeconvolution::RunSubImage(
                           std::isfinite(sub_image.peak) && !result.is_diverging;
   if (!converging && !find_peak_only) {
     std::ostringstream warning_str;
-    warning_str << "Sub-image " << sub_image.index << " has a peak of "
-                << sub_image.peak
+    warning_str << "Peak of sub-image " << sub_image.index << " increased from "
+                << aocommon::units::FluxDensity::ToNiceString(peak_at_start)
+                << " to "
+                << aocommon::units::FluxDensity::ToNiceString(sub_image.peak)
                 << " and deconvolution probably diverged: resetting.\n";
     aocommon::Logger::Warn << warning_str.str();
 
@@ -464,10 +470,16 @@ void ParallelDeconvolution::RunSubImage(
 
   if (find_peak_only) {
     algorithms_[sub_image.index]->SetMaxIterations(max_n_iter);
-  } else if (converging) {
-    const std::lock_guard<std::mutex> lock(mutex);
-    data_image.CopyMasked(*sub_data, sub_image.x, sub_image.y,
-                          sub_image.boundary_mask.data());
+  } else {
+    if (converging) {
+      const std::lock_guard<std::mutex> lock(mutex);
+      data_image.CopyMasked(*sub_data, sub_image.x, sub_image.y,
+                            sub_image.boundary_mask.data());
+    } else {
+      // The result model starts empty. Even when diverging, the model
+      // as it was before this iteration should be added to it.
+      sub_model->SetImages(std::move(initial_model_images));
+    }
     result_model.AddSubImage(*sub_model, sub_image.x, sub_image.y);
   }
 }

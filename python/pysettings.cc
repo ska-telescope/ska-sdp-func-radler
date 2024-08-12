@@ -94,6 +94,8 @@ void init_settings(py::module& m) {
       .def_readwrite("major_iteration_count",
                      &radler::Settings::major_iteration_count,
                      DOC(radler_Settings_major_iteration_count))
+      .def_readwrite("divergence_limit", &radler::Settings::divergence_limit,
+                     DOC(radler_Settings_divergence_limit))
       .def_readwrite("allow_negative_components",
                      &radler::Settings::allow_negative_components,
                      DOC(radler_Settings_allow_negative_components))
