@@ -44,35 +44,29 @@ void IuwtDeconvolutionAlgorithm::MeasureRMSPerScale(
   IuwtDecomposition imageIUWT(end_scale, width_, height_);
   imageIUWT.Decompose(image, scratch, false);
 
-  psf_major_ = 2.0;
-  psf_minor_ = 2.0;
-  psf_pa_ = 0.0;
   double fl = 0.0;
-  schaapcommon::fitters::GaussianFitter fitter;
-  fitter.Fit2DGaussianCentred(image, width_, height_, 2.0, psf_major_,
-                              psf_minor_, psf_pa_);
+  schaapcommon::fitters::Ellipse ellipse =
+      schaapcommon::fitters::Fit2DGaussianCentred(image, width_, height_, 2.0);
 
   double v = 1.0, x = width_ / 2, y = height_ / 2;
-  double bMaj = psf_major_, bMin = psf_minor_, bPA = psf_pa_;
-  fitter.Fit2DGaussianFull(image, width_, height_, v, x, y, bMaj, bMin, bPA,
-                           &fl);
+  schaapcommon::fitters::Fit2DGaussianFull(image, width_, height_, v, x, y,
+                                           ellipse.major, ellipse.minor,
+                                           ellipse.position_angle, &fl);
 
   psf_response.resize(end_scale);
   for (size_t scale = 0; scale != end_scale; ++scale) {
     psf_response[scale].rms = imageIUWT[scale].Coefficients().RMS();
     psf_response[scale].peak_response =
         CentralPeak(imageIUWT[scale].Coefficients());
-    bMaj = 2.0;
-    bMin = 2.0;
-    bPA = 0.0;
     v = 1.0;
     x = width_ / 2;
     y = height_ / 2;
-    fitter.Fit2DGaussianFull(imageIUWT[scale].Coefficients().Data(), width_,
-                             height_, v, x, y, bMaj, bMin, bPA, &fl);
-    psf_response[scale].b_major = bMaj;
-    psf_response[scale].b_minor = bMin;
-    psf_response[scale].b_pa = bPA;
+    schaapcommon::fitters::Fit2DGaussianFull(
+        imageIUWT[scale].Coefficients().Data(), width_, height_, v, x, y,
+        ellipse.major, ellipse.minor, ellipse.position_angle, &fl);
+    psf_response[scale].b_major = ellipse.major;
+    psf_response[scale].b_minor = ellipse.minor;
+    psf_response[scale].b_pa = ellipse.position_angle;
   }
 
   imageIUWT.Decompose(imageIUWT[1].Coefficients().Data(), scratch, false);
