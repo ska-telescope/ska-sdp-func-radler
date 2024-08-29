@@ -12,7 +12,7 @@
 #include <aocommon/units/fluxdensity.h>
 #include <aocommon/threadpool.h>
 
-#include <schaapcommon/fft/convolution.h>
+#include <schaapcommon/math/convolution.h>
 
 #include "algorithms/generic_clean.h"
 #include "algorithms/iuwt_deconvolution.h"
@@ -115,7 +115,7 @@ Radler::Radler(const Settings& settings, double beam_size)
 
   // Ensure that all FFTWF plan calls inside Radler are
   // thread safe.
-  schaapcommon::fft::MakeFftwfPlannerThreadSafe();
+  schaapcommon::math::MakeFftwfPlannerThreadSafe();
 }
 
 Radler::~Radler() { FreeDeconvolutionAlgorithms(); }

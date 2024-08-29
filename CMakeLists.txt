@@ -155,7 +155,7 @@ find_package(PythonInterp REQUIRED) # Call before finding PythonLibs!
 find_package(PythonLibs 3 REQUIRED)
 message(STATUS "Using python version ${PYTHON_VERSION_STRING}")
 
-set(SCHAAPCOMMON_MODULES fft fitters)
+set(SCHAAPCOMMON_MODULES fitters math)
 if(COMPILE_AS_EXTERNAL_PROJECT)
   add_subdirectory(${SCHAAPCOMMON_SOURCE_DIR}
                    ${PROJECT_BINARY_DIR}/schaapcommon)

@@ -9,7 +9,7 @@
 #include <aocommon/dynamicfor.h>
 #include <aocommon/units/fluxdensity.h>
 
-#include <schaapcommon/fft/convolution.h>
+#include <schaapcommon/math/convolution.h>
 
 #include "algorithms/multiscale_algorithm.h"
 #include "math/dijkstra_splitter.h"
@@ -176,7 +176,7 @@ ParallelDeconvolution::ParallelDeconvolution(const Settings& settings)
       use_per_scale_masks_(false) {
   // Make all FFTWF plan calls inside ParallelDeconvolution
   // thread safe.
-  schaapcommon::fft::MakeFftwfPlannerThreadSafe();
+  schaapcommon::math::MakeFftwfPlannerThreadSafe();
 }
 
 ParallelDeconvolution::~ParallelDeconvolution() = default;

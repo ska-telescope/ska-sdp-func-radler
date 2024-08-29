@@ -7,7 +7,7 @@
 #include <aocommon/fits/fitswriter.h>
 #include <aocommon/logger.h>
 
-#include <schaapcommon/fft/convolution.h>
+#include <schaapcommon/math/convolution.h>
 
 #include "utils/application.h"
 
@@ -19,9 +19,9 @@ void MoreSane::ExecuteMajorIteration(float* residual_data, float* model_data,
   if (IterationNumber() != 0) {
     aocommon::Logger::Info << "Convolving model with psf...\n";
     aocommon::Image preparedPsf(width, height);
-    schaapcommon::fft::PrepareConvolutionKernel(
+    schaapcommon::math::PrepareConvolutionKernel(
         preparedPsf.Data(), psf_image.Data(), width, height);
-    schaapcommon::fft::Convolve(model_data, preparedPsf.Data(), width, height);
+    schaapcommon::math::Convolve(model_data, preparedPsf.Data(), width, height);
     aocommon::Logger::Info << "Adding model back to residual...\n";
     for (size_t i = 0; i != width * height; ++i) {
       residual_data[i] += model_data[i];

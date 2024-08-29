@@ -5,7 +5,7 @@
 #include <aocommon/image.h>
 #include <aocommon/staticfor.h>
 
-#include <schaapcommon/fft/restoreimage.h>
+#include <schaapcommon/math/restoreimage.h>
 
 using aocommon::Image;
 
@@ -18,7 +18,7 @@ void Make(Image& rms_output, const Image& input_image, double window_size,
   image.Square();
   rms_output = Image(image.Width(), image.Height(), 0.0);
 
-  schaapcommon::fft::RestoreImage(
+  schaapcommon::math::RestoreImage(
       rms_output.Data(), image.Data(), image.Width(), image.Height(),
       beam_major * window_size, beam_minor * window_size, beam_pa,
       pixel_scale_l, pixel_scale_m);
