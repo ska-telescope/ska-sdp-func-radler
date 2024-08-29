@@ -14,6 +14,7 @@
 #include "algorithms/subminor_loop.h"
 #include "math/peak_finder.h"
 #include "multiscale/multiscale_transforms.h"
+#include "utils/fft_size_calculations.h"
 
 using aocommon::Image;
 using aocommon::Logger;
@@ -117,10 +118,11 @@ DeconvolutionResult MultiScaleAlgorithm::ExecuteMajorIteration(
   // scratch and scratchB are used by the subminorloop, which convolves the
   // images and requires therefore more space. This space depends on the scale,
   // so here the required size for the largest scale is calculated.
-  size_t scratchWidth;
-  size_t scratchHeight;
-  GetConvolutionDimensions(scale_infos_.size() - 1, width, height, scratchWidth,
-                           scratchHeight);
+  const size_t scratchWidth = utils::GetConvolutionSize(
+      scale_infos_.back().scale, width, settings_.convolution_padding);
+  const size_t scratchHeight = utils::GetConvolutionSize(
+      scale_infos_.back().scale, height, settings_.convolution_padding);
+
   scratch = Image(scratchWidth, scratchHeight);
   scratchB = Image(scratchWidth, scratchHeight);
   integratedScratch = Image(width, height);
@@ -233,9 +235,12 @@ DeconvolutionResult MultiScaleAlgorithm::ExecuteMajorIteration(
     // is only efficient when doing many iterations.
     if (settings_.fast_sub_minor_loop) {
       size_t subMinorStartIteration = IterationNumber();
-      size_t convolutionWidth, convolutionHeight;
-      GetConvolutionDimensions(scaleWithPeak, width, height, convolutionWidth,
-                               convolutionHeight);
+      const size_t convolutionWidth =
+          utils::GetConvolutionSize(scale_infos_[scaleWithPeak].scale, width,
+                                    settings_.convolution_padding);
+      const size_t convolutionHeight =
+          utils::GetConvolutionSize(scale_infos_[scaleWithPeak].scale, height,
+                                    settings_.convolution_padding);
       SubMinorLoop subLoop(width, height, convolutionWidth, convolutionHeight,
                            LogReceiver());
       subLoop.SetIterationInfo(IterationNumber(), MaxIterations());
@@ -715,36 +720,4 @@ void MultiScaleAlgorithm::FindPeakDirect(const aocommon::Image& image,
   }
 }
 
-static size_t calculateGoodFFTSize(size_t n) {
-  size_t bestfac = 2 * n;
-  /* NOTE: Starting from f2=2 here instead from f2=1 as usual, because the
-                  result needs to be even. */
-  for (size_t f2 = 2; f2 < bestfac; f2 *= 2) {
-    for (size_t f23 = f2; f23 < bestfac; f23 *= 3) {
-      for (size_t f235 = f23; f235 < bestfac; f235 *= 5) {
-        for (size_t f2357 = f235; f2357 < bestfac; f2357 *= 7) {
-          if (f2357 >= n) bestfac = f2357;
-        }
-      }
-    }
-  }
-  return bestfac;
-}
-
-void MultiScaleAlgorithm::GetConvolutionDimensions(
-    size_t scale_index, size_t width, size_t height, size_t& width_result,
-    size_t& height_result) const {
-  double scale = scale_infos_[scale_index].scale;
-  // The factor of 1.5 comes from some superficial experience with diverging
-  // runs. It's supposed to be a balance between diverging runs caused by
-  // insufficient padding on one hand, and taking up too much memory on the
-  // other. I've seen divergence when padding=1.1, width=1500, max scale=726
-  // and conv width=1650. Divergence occurred on scale 363. Was solved with conv
-  // width=2250. 2250 = 1.1*(363*factor + 1500)  --> factor = 1.5 And solved
-  // with conv width=2000. 2000 = 1.1*(363*factor + 1500)  --> factor = 0.8
-  width_result = ceil(settings_.convolution_padding * (scale * 1.5 + width));
-  height_result = ceil(settings_.convolution_padding * (scale * 1.5 + height));
-  width_result = calculateGoodFFTSize(width_result);
-  height_result = calculateGoodFFTSize(height_result);
-}
 }  // namespace radler::algorithms

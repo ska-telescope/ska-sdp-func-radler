@@ -120,9 +120,6 @@ class MultiScaleAlgorithm final : public DeconvolutionAlgorithm {
 
   void FindPeakDirect(const aocommon::Image& image, aocommon::Image& scratch,
                       size_t scale_index);
-
-  void GetConvolutionDimensions(size_t scale_index, size_t width, size_t height,
-                                size_t& width_out, size_t& height_out) const;
 };
 }  // namespace radler::algorithms
 #endif  // RADLER_ALGORITHMS_MULTISCALE_ALGORITHM_H_
