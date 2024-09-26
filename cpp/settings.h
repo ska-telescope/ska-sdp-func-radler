@@ -40,6 +40,14 @@ enum class AlgorithmType {
    */
   kGenericClean,
   /**
+   * The adaptive scale pixel algorith described by Bhatnagar & Cornwell (2004),
+   * extended with support for multi-frequency deconvolution and sub-image
+   * deconvolution. The algorithm is rather slow and generally does not result
+   * in better results compared to Radler's multiscale algorithm. In specific
+   * cases with diffuse structures it may be useful.
+   */
+  kAdaptiveScalePixel,
+  /**
    * An algorithm similar to the MORESANE algorithm (A Dabbech et al., 2014),
    * but reimplemented in C++ and extended for multi frequency/polarization
    * clean.

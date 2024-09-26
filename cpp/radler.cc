@@ -14,6 +14,7 @@
 
 #include <schaapcommon/math/convolution.h>
 
+#include "algorithms/asp_algorithm.h"
 #include "algorithms/generic_clean.h"
 #include "algorithms/iuwt_deconvolution.h"
 #include "algorithms/more_sane.h"
@@ -330,27 +331,29 @@ void Radler::InitializeDeconvolutionAlgorithm(
   std::unique_ptr<algorithms::DeconvolutionAlgorithm> algorithm;
 
   switch (settings_.algorithm_type) {
-    case AlgorithmType::kPython:
-      algorithm = std::make_unique<algorithms::PythonDeconvolution>(
-          settings_.python.filename);
+    case AlgorithmType::kGenericClean:
+      algorithm = std::make_unique<algorithms::GenericClean>(
+          settings_.generic.use_sub_minor_optimization);
+      break;
+    case AlgorithmType::kAdaptiveScalePixel:
+      algorithm = std::make_unique<algorithms::AspAlgorithm>(
+          settings_.multiscale, beam_size_, pixel_scale_x_, pixel_scale_y_);
+      break;
+    case AlgorithmType::kIuwt:
+      algorithm = std::make_unique<algorithms::IuwtDeconvolution>();
       break;
     case AlgorithmType::kMoreSane:
       algorithm = std::make_unique<algorithms::MoreSane>(settings_.more_sane,
                                                          settings_.prefix_name);
       break;
-    case AlgorithmType::kIuwt: {
-      algorithm = std::make_unique<algorithms::IuwtDeconvolution>();
-      break;
-    }
-    case AlgorithmType::kMultiscale: {
+    case AlgorithmType::kMultiscale:
       algorithm = std::make_unique<algorithms::MultiScaleAlgorithm>(
           settings_.multiscale, beam_size_, pixel_scale_x_, pixel_scale_y_,
           settings_.save_source_list);
       break;
-    }
-    case AlgorithmType::kGenericClean:
-      algorithm = std::make_unique<algorithms::GenericClean>(
-          settings_.generic.use_sub_minor_optimization);
+    case AlgorithmType::kPython:
+      algorithm = std::make_unique<algorithms::PythonDeconvolution>(
+          settings_.python.filename);
       break;
   }
 

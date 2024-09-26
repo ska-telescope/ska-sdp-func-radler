@@ -25,6 +25,13 @@
 
 static const char *__doc_radler_AlgorithmType = R"doc(The deconvolution algorithm type.)doc";
 
+static const char *__doc_radler_AlgorithmType_kAdaptiveScalePixel =
+R"doc(The adaptive scale pixel algorith described by Bhatnagar & Cornwell
+(2004), extended with support for multi-frequency deconvolution and
+sub-image deconvolution. The algorithm is rather slow and generally
+does not result in better results compared to Radler's multiscale
+algorithm. In specific cases with diffuse structures it may be useful.)doc";
+
 static const char *__doc_radler_AlgorithmType_kGenericClean =
 R"doc(A "Högbom" CLEAN algorithm, extended with multi frequency/polarization
 clean. It also extends the basic CLEAN algorithm with features such as

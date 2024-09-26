@@ -16,6 +16,7 @@ set(RADLER_FILES
     radler.cc
     component_list.cc
     image_set.cc
+    algorithms/asp_algorithm.cc
     algorithms/deconvolution_algorithm.cc
     algorithms/generic_clean.cc
     algorithms/iuwt_deconvolution_algorithm.cc

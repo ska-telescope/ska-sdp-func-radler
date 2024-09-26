@@ -26,6 +26,9 @@ std::ostream& boost_test_print_type(std::ostream& stream,
     case AlgorithmType::kGenericClean:
       stream << "Generic clean";
       break;
+    case AlgorithmType::kAdaptiveScalePixel:
+      stream << "Adaptive scale pixel clean";
+      break;
     case AlgorithmType::kMultiscale:
       stream << "Multiscale clean";
       break;
@@ -92,8 +95,9 @@ struct SettingsFixture {
   Settings settings;
 };
 
-std::array<AlgorithmType, 2> kAlgorithmTypes{
+constexpr std::array<AlgorithmType, 3> kAlgorithmTypes{
     AlgorithmType::kGenericClean, AlgorithmType::kMultiscale,
+    AlgorithmType::kAdaptiveScalePixel
     /* Fails AlgorithmType::kIuwt */
 };
 
