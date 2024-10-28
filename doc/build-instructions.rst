@@ -6,9 +6,9 @@ Build instructions
 Radler can be installed as a stand-alone package, but is also installed as a part of `WSClean <https://wsclean.readthedocs.io>`_. 
 If you only want to install WSClean, it is not necessary to build Radler yourself.
 
-Installing from pypi
-~~~~~~~~~~~~~~~~~~~~
-Radler can be installed from pypi:
+Installing from pypi (outdated)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Radler can be installed from pypi. **NOTE: the version currently on PyPI is very outdated, please build from source instead**
 
 ::
 
