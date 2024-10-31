@@ -108,6 +108,12 @@ static const char *__doc_radler_Settings_LocalRms_method =
 R"doc(The method, or LocalRmsMethod::kNone to disable local RMS
 thresholding.)doc";
 
+static const char *__doc_radler_Settings_LocalRms_strength =
+R"doc(The strength with which the local RMS is applied. With a value of 1,
+peaks are compared relative to the calculated local RMS. With a value
+of 0, peaks are compared relative to the global RMS. The RMS is scaled
+using the equation local_rms ^ strength.)doc";
+
 static const char *__doc_radler_Settings_LocalRms_window = R"doc(Size of the sliding window to calculate the "local" RMS over.)doc";
 
 static const char *__doc_radler_Settings_MoreSane =

@@ -175,26 +175,16 @@ void Radler::Perform(bool& reached_major_threshold,
     // the RMS background anymore
     parallel_deconvolution_->SetRmsFactorImage(Image());
   } else {
+    Image rms_image;
     if (!settings_.local_rms.image.empty()) {
-      Image rms_image(image_width_, image_height_);
+      rms_image = Image(image_width_, image_height_);
       FitsReader reader(settings_.local_rms.image);
       reader.Read(rms_image.Data());
-      // Normalize the RMS image
-      stddev = rms_image.Min();
-      Logger::Info << "Lowest RMS in image: "
-                   << FluxDensity::ToNiceString(stddev) << '\n';
-      if (stddev <= 0.0) {
-        throw std::runtime_error(
-            "RMS image can only contain values > 0, but contains values <= "
-            "0.0");
-      }
-      for (float& value : rms_image) {
-        if (value != 0.0) value = stddev / value;
-      }
+      stddev = math::rms_image::MakeRmsFactorImage(
+          rms_image, settings_.local_rms.strength);
       parallel_deconvolution_->SetRmsFactorImage(std::move(rms_image));
     } else if (settings_.local_rms.method != LocalRmsMethod::kNone) {
       Logger::Debug << "Constructing local RMS image...\n";
-      Image rms_image;
       // TODO this should use full beam parameters
       switch (settings_.local_rms.method) {
         case LocalRmsMethod::kNone:
@@ -211,14 +201,8 @@ void Radler::Perform(bool& reached_major_threshold,
               beam_size_, 0.0, pixel_scale_x_, pixel_scale_y_);
           break;
       }
-      // Normalize the RMS image relative to the threshold so that Jy remains
-      // Jy.
-      stddev = rms_image.Min();
-      Logger::Info << "Lowest RMS in image: "
-                   << FluxDensity::ToNiceString(stddev) << '\n';
-      for (float& value : rms_image) {
-        if (value != 0.0) value = stddev / value;
-      }
+      stddev = math::rms_image::MakeRmsFactorImage(
+          rms_image, settings_.local_rms.strength);
       parallel_deconvolution_->SetRmsFactorImage(std::move(rms_image));
     }
   }

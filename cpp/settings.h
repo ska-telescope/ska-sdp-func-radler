@@ -348,6 +348,13 @@ struct Settings {
      * calculated RMS image.
      */
     std::string image;
+    /**
+     * The strength with which the local RMS is applied. With a value
+     * of 1, peaks are compared relative to the calculated local RMS. With
+     * a value of 0, peaks are compared relative to the global RMS.
+     * The RMS is scaled using the equation local_rms ^ strength.
+     */
+    double strength = 1.0;
   } local_rms;
 
   /**
