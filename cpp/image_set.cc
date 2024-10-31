@@ -109,7 +109,7 @@ void ImageSet::LoadAndAverage(bool use_residual_image) {
 
   Image scratch(Width(), Height());
 
-  aocommon::UVector<double> averaged_weights(images_.size(), 0.0);
+  std::vector<double> averaged_weights(images_.size(), 0.0);
   size_t image_index = 0;
   for (const std::vector<size_t>& group : work_table_.DeconvolutionGroups()) {
     const size_t deconvolution_channel_start_index = image_index;
@@ -123,8 +123,12 @@ void ImageSet::LoadAndAverage(bool use_residual_image) {
         LoadImage(use_residual_image ? *entry_ptr->residual_accessor
                                      : *entry_ptr->model_accessor,
                   scratch);
-        images_[image_index].AddWithFactor(scratch, entry_ptr->image_weight);
-        averaged_weights[image_index] += entry_ptr->image_weight;
+        // If the weight is zero, the image may contain NaNs, so in that case do
+        // not include the image.
+        if (entry_ptr->image_weight != 0.0) {
+          images_[image_index].AddWithFactor(scratch, entry_ptr->image_weight);
+          averaged_weights[image_index] += entry_ptr->image_weight;
+        }
         ++image_index;
       }
     }
@@ -135,8 +139,7 @@ void ImageSet::LoadAndAverage(bool use_residual_image) {
   }
 }
 
-[[nodiscard]] std::vector<std::vector<aocommon::Image>>
-ImageSet::LoadAndAveragePsfs() const {
+std::vector<std::vector<aocommon::Image>> ImageSet::LoadAndAveragePsfs() const {
   std::vector<std::vector<aocommon::Image>> result;
 
   // The PSF accessor vectors in each group should have equal shapes:

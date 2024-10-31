@@ -95,8 +95,7 @@ class ImageSet {
    *
    * @pre @c work_table_.ValidatePsfs() can be called without throwing.
    */
-  [[nodiscard]] std::vector<std::vector<aocommon::Image>> LoadAndAveragePsfs()
-      const;
+  std::vector<std::vector<aocommon::Image>> LoadAndAveragePsfs() const;
 
   void InterpolateAndStoreModel(
       const schaapcommon::fitters::SpectralFitter& fitter);
