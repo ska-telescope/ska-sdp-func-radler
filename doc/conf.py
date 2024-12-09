@@ -12,7 +12,6 @@
 #
 import os
 import sys
-
 from datetime import date
 
 # Make sure that it refers to the shared object file from current build

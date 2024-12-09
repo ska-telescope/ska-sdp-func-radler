@@ -1,10 +1,11 @@
 # SPDX-License-Identifier: LGPL-3.0-only
 
-import radler as rd
-import pytest
-import numpy as np
 import os.path
 
+import numpy as np
+import pytest
+
+import radler as rd
 
 WIDTH = 64
 HEIGHT = 64

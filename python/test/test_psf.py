@@ -1,7 +1,8 @@
 # SPDX-License-Identifier: LGPL-3.0-only
 
-import radler as rd
 import numpy as np
+
+import radler as rd
 
 # Tests for the VectorUniquePtrImageAccessor classe. This class is created in
 # C++ and can't be created directly by Python. They are available in a

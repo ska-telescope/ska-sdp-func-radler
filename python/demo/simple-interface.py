@@ -2,10 +2,10 @@
 # Copyright (C) 2024 ASTRON (Netherlands Institute for Radio Astronomy)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-import radler
-
 import numpy as np
 from astropy.io import fits
+
+import radler
 
 # Example images for this demo can be downloaded from this address:
 # https://support.astron.nl/software/ci_data/radler/mwa-vela.tar.bz2

@@ -1,8 +1,9 @@
 # SPDX-License-Identifier: LGPL-3.0-only
 
-import radler as rd
 import multiprocessing
 import re
+
+import radler as rd
 
 
 def test_layout():
