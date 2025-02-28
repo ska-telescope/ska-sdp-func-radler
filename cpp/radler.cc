@@ -165,9 +165,11 @@ void Radler::Perform(bool& reached_major_threshold,
   Image integrated(image_width_, image_height_);
   residual_set.GetLinearIntegrated(integrated);
   Logger::Debug << "Calculating standard deviation...\n";
-  double stddev = integrated.StdDevFromMAD();
+  const std::pair<float, float> median_and_stddev =
+      integrated.MedianAndStdDevFromMAD();
+  double stddev = median_and_stddev.second;
   Logger::Info << "Estimated standard deviation of background noise: "
-               << FluxDensity::ToNiceString(stddev) << '\n';
+               << FluxDensity::ToNiceString(median_and_stddev.second) << '\n';
   const bool auto_mask_is_enabled =
       settings_.auto_mask_sigma || settings_.absolute_auto_mask_threshold;
   if (auto_mask_is_enabled && auto_mask_is_finished_) {
@@ -206,15 +208,22 @@ void Radler::Perform(bool& reached_major_threshold,
       parallel_deconvolution_->SetRmsFactorImage(std::move(rms_image));
     }
   }
+
+  // When using squared joins, the stddev is not appropriate as a threshold,
+  // because the whole image will have a positive mean(/median). It is probably
+  // best to unconditionally add the mean, but at this point I didn't want to
+  // change the behaviour for non-squared joins.
+  const double threshold_bias =
+      settings_.squared_joins ? median_and_stddev.first : 0.0;
   if (auto_mask_is_enabled && !auto_mask_is_finished_) {
-    const double combined_auto_mask_threshold =
-        std::max(stddev * settings_.auto_mask_sigma.value_or(0.0),
-                 settings_.absolute_auto_mask_threshold.value_or(0.0));
+    const double combined_auto_mask_threshold = std::max(
+        stddev * settings_.auto_mask_sigma.value_or(0.0) + threshold_bias,
+        settings_.absolute_auto_mask_threshold.value_or(0.0));
     parallel_deconvolution_->SetThreshold(
         std::max(combined_auto_mask_threshold, settings_.absolute_threshold));
   } else if (settings_.auto_threshold_sigma) {
     parallel_deconvolution_->SetThreshold(
-        std::max(stddev * (*settings_.auto_threshold_sigma),
+        std::max(stddev * (*settings_.auto_threshold_sigma) + threshold_bias,
                  settings_.absolute_threshold));
   }
   integrated.Reset();
