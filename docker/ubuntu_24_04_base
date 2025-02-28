@@ -37,9 +37,12 @@ RUN export DEBIAN_FRONTEND="noninteractive" && \
         wget \
     && \
     rm -rf /var/lib/apt/lists/*
+# Pin clang version to the clang version in Ubuntu 24.04.
+# Otherwise they are incompatible and the docstring CI job fails.
 RUN python3 -m pip install --break-system-packages \
         cmake-format \
         isort \
+        clang==18.1.8 \
         pybind11-mkdoc
 RUN locale-gen en_US.UTF-8  # Necessary for creating docstrings (Högbom)
 ENV LANG en_US.UTF-8
