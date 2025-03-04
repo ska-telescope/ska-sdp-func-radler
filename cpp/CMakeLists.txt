@@ -34,6 +34,7 @@ set(RADLER_FILES
     algorithms/multiscale/multiscale_transforms.cc
     math/dijkstra_splitter.cc
     math/peak_finder.cc
+    math/component_optimization.cc
     math/rms_image.cc
     utils/casa_mask_reader.cc
     utils/compressed_mask.cc
