@@ -38,6 +38,25 @@ aocommon::Image LinearComponentSolve(
 void LinearComponentSolve(aocommon::Image& model, const aocommon::Image& image,
                           const aocommon::Image& psf);
 
+/**
+ * Perform a linear fit of the components, such that the components convolved by
+ * the psf have minimal squared distance to the image.
+ * @param components List of x, y positions that specify pixels to be fitted.
+ * @returns The model image resulting from the fit.
+ */
+aocommon::Image GradientDescent(
+    const std::vector<std::pair<size_t, size_t>>& components,
+    const aocommon::Image& image, const aocommon::Image& psf,
+    size_t padded_width, size_t padded_height, bool use_fft_convolution);
+
+/**
+ * Same as other GradientDescent() overload, but this overload determines the
+ * components from the model image and updates the model image.
+ */
+void GradientDescent(aocommon::Image& model, const aocommon::Image& image,
+                     const aocommon::Image& psf, size_t padded_width,
+                     size_t padded_height, bool use_fft_convolution);
+
 }  // namespace radler::math
 
 #endif
