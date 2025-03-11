@@ -53,7 +53,7 @@ def test_default():
     assert settings.auto_mask_sigma == None
     assert settings.save_source_list == False
     assert settings.minor_iteration_count == 0
-    assert settings.major_iteration_count == 20
+    assert settings.major_iteration_count == 12
     assert settings.divergence_limit == 4.0
     assert settings.allow_negative_components == True
     assert settings.stop_on_negative_components == False

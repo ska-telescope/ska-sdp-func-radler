@@ -318,6 +318,10 @@ also list a subset of the full list of imaged polarizations.)doc";
 
 static const char *__doc_radler_Settings_local_rms = R"doc()doc";
 
+static const char *__doc_radler_Settings_major_auto_mask_iteration_count =
+R"doc(Stopping criterion on the total number of major iterations after
+having reached the auto-mask threshold.)doc";
+
 static const char *__doc_radler_Settings_major_iteration_count =
 R"doc(Stopping criterion on the total number of major iterations. Radler
 will take this into account to determine the

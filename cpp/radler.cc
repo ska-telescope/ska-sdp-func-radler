@@ -85,15 +85,12 @@ Radler::Radler(const Settings& settings, const aocommon::Image& psf_image,
 
 Radler::Radler(const Settings& settings, double beam_size)
     : settings_(settings),
-      table_(),
       parallel_deconvolution_(
           std::make_unique<algorithms::ParallelDeconvolution>(settings_)),
-      auto_mask_is_finished_(false),
       image_width_(settings_.trimmed_image_width),
       image_height_(settings_.trimmed_image_height),
       pixel_scale_x_(settings_.pixel_scale.x),
       pixel_scale_y_(settings_.pixel_scale.y),
-      auto_mask_(),
       beam_size_(beam_size) {
   if (settings.spectral_fitting.mode ==
           schaapcommon::fitters::SpectralFittingMode::kForcedTerms &&
@@ -130,7 +127,7 @@ const algorithms::DeconvolutionAlgorithm& Radler::MaxScaleCountAlgorithm()
   return parallel_deconvolution_->MaxScaleCountAlgorithm();
 }
 
-void Radler::Perform(bool& reached_major_threshold,
+void Radler::Perform(bool& perform_another_iteration,
                      size_t major_iteration_number) {
   /**
    * Because functions like convolution in schaapcommon use parallelized fors,
@@ -260,27 +257,40 @@ void Radler::Perform(bool& reached_major_threshold,
 
   parallel_deconvolution_->ExecuteMajorIteration(
       residual_set, model_set, psf_images, table_->PsfOffsets(),
-      reached_major_threshold);
+      perform_another_iteration);
 
-  if (!reached_major_threshold && auto_mask_is_enabled &&
+  if (!perform_another_iteration && auto_mask_is_enabled &&
       !auto_mask_is_finished_) {
     Logger::Info << "Auto-masking threshold reached; continuing next major "
                     "iteration with deeper threshold and mask.\n";
     auto_mask_is_finished_ = true;
-    reached_major_threshold = true;
+    perform_another_iteration = true;
+    auto_mask_finishing_iteration = major_iteration_number;
   }
 
-  if (settings_.major_iteration_count != 0 &&
+  if (perform_another_iteration && settings_.major_iteration_count != 0 &&
       major_iteration_number >= settings_.major_iteration_count) {
-    reached_major_threshold = false;
+    perform_another_iteration = false;
     Logger::Info << "Maximum number of major iterations was reached: not "
                     "continuing deconvolution.\n";
   }
 
-  if (settings_.minor_iteration_count != 0 &&
+  if (perform_another_iteration && auto_mask_is_finished_ &&
+      major_iteration_number - auto_mask_finishing_iteration >=
+          settings_.major_auto_mask_iteration_count) {
+    perform_another_iteration = false;
+    Logger::Info << "Performed "
+                 << major_iteration_number - auto_mask_finishing_iteration
+                 << " major iterations after reaching the auto-mask threshold. "
+                    "The stopping criterion is "
+                 << settings_.major_auto_mask_iteration_count
+                 << ": not continuing deconvolution.\n";
+  }
+
+  if (perform_another_iteration && settings_.minor_iteration_count != 0 &&
       parallel_deconvolution_->FirstAlgorithm().IterationNumber() >=
           settings_.minor_iteration_count) {
-    reached_major_threshold = false;
+    perform_another_iteration = false;
     Logger::Info
         << "Maximum number of minor deconvolution iterations was reached: not "
            "continuing deconvolution.\n";

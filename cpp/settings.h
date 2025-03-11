@@ -243,7 +243,13 @@ struct Settings {
    * take this into account to determine the @c reached_major_threshold value
    * returned by @ref Radler::Perform().
    */
-  size_t major_iteration_count = 20;
+  size_t major_iteration_count = 12;
+
+  /**
+   * Stopping criterion on the total number of major iterations after having
+   * reached the auto-mask threshold.
+   */
+  size_t major_auto_mask_iteration_count = 2;
 
   /**
    * When set to @c false, only positive components are cleaned. This is

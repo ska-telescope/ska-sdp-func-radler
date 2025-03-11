@@ -57,16 +57,16 @@ class Radler {
   const algorithms::DeconvolutionAlgorithm& MaxScaleCountAlgorithm() const;
 
   /**
-   * @param [out] reached_major_threshold on exit, indicates whether another
+   * @param [out] perform_another_iteration on exit, indicates whether another
    * major iteration should be run. If @c true, the caller should do a new
    * prediction-gridding iteration to calculate a new residual image, after
    * which the @c Perform() function should be called again. If @c false on
    * exit, the algorithm is finished and the caller can do its last
    * prediction-gridding round.
-   * @param major_iteration_number How many major iterations (calls to @c
-   * Perform()) were performed so far.
+   * @param major_iteration_number How many major iterations (calls to
+   * @c Perform()) were performed so far.
    */
-  void Perform(bool& reached_major_threshold, size_t major_iteration_number);
+  void Perform(bool& perform_another_iteration, size_t major_iteration_number);
 
   void FreeDeconvolutionAlgorithms();
 
@@ -97,13 +97,14 @@ class Radler {
 
   aocommon::UVector<bool> clean_mask_;
 
-  bool auto_mask_is_finished_;
-  size_t image_width_;
-  size_t image_height_;
-  double pixel_scale_x_;
-  double pixel_scale_y_;
+  bool auto_mask_is_finished_ = false;
+  size_t auto_mask_finishing_iteration = 0;
+  size_t image_width_ = 0;
+  size_t image_height_ = 0;
+  double pixel_scale_x_ = 0.0;
+  double pixel_scale_y_ = 0.0;
   aocommon::UVector<bool> auto_mask_;
-  double beam_size_;
+  double beam_size_ = 0.0;
 };
 
 }  // namespace radler
