@@ -17,13 +17,11 @@ namespace {
 /**
  * Returns a list with non-zero valued positions.
  */
-std::vector<std::pair<size_t, size_t>> GetActivePositions(const Image model,
-                                                          size_t width,
-                                                          size_t height) {
+std::vector<std::pair<size_t, size_t>> GetActivePositions(const Image& model) {
   const float* image_ptr = model.Data();
   std::vector<std::pair<size_t, size_t>> active_positions;
-  for (size_t y = 0; y != height; ++y) {
-    for (size_t x = 0; x != width; ++x) {
+  for (size_t y = 0; y != model.Height(); ++y) {
+    for (size_t x = 0; x != model.Width(); ++x) {
       if (*image_ptr != 0.0) {
         active_positions.emplace_back(x, y);
       }
@@ -154,7 +152,7 @@ void CalculateDerivatives(
  * sum over all pixels: (stepsize * direction - residual)^2
  */
 void ApplyLineSearch(aocommon::UVector<float>& model_values,
-                     const Image& residual, const Image& derivative_image,
+                     const Image& residual, const Image& direction_image,
                      const aocommon::UVector<float>& derivatives) {
   // find the step size: it should minimize step in
   // - f = sum_data: ( step * derivative_image_i - image_i )^2
@@ -165,8 +163,8 @@ void ApplyLineSearch(aocommon::UVector<float>& model_values,
   float step_numerator = 0.0;
   float step_divisor = 0.0;
   for (size_t i = 0; i != residual.Size(); ++i) {
-    step_numerator += derivative_image[i] * residual[i];
-    step_divisor += derivative_image[i] * derivative_image[i];
+    step_numerator += direction_image[i] * residual[i];
+    step_divisor += direction_image[i] * direction_image[i];
   }
   if (step_divisor != 0.0) {
     const float step = step_numerator / step_divisor;
@@ -258,10 +256,8 @@ aocommon::Image LinearComponentSolve(
 }
 
 void LinearComponentSolve(Image& model, const Image& image, const Image& psf) {
-  const size_t width = model.Width();
-  const size_t height = model.Height();
   const std::vector<std::pair<size_t, size_t>> active_list =
-      GetActivePositions(model, width, height);
+      GetActivePositions(model);
 
   model += LinearComponentSolve(active_list, image, psf);
 }
@@ -311,10 +307,8 @@ aocommon::Image GradientDescent(
 void GradientDescent(Image& model, const Image& image, const Image& psf,
                      size_t padded_width, size_t padded_height,
                      bool use_fft_convolution) {
-  const ssize_t width = image.Width();
-  const ssize_t height = image.Height();
   const std::vector<std::pair<size_t, size_t>> active_list =
-      GetActivePositions(model, width, height);
+      GetActivePositions(model);
 
   const aocommon::Image delta_model =
       GradientDescent(active_list, image, psf, padded_width, padded_height,
@@ -324,6 +318,85 @@ void GradientDescent(Image& model, const Image& image, const Image& psf,
     model.Value(model_pos.first, model_pos.second) +=
         delta_model.Value(model_pos.first, model_pos.second);
   }
+}
+
+std::vector<aocommon::Image> GradientDescentWithVariablePsf(
+    const std::vector<std::vector<std::pair<size_t, size_t>>>&
+        components_per_psf,
+    const aocommon::Image& image, const std::vector<aocommon::Image>& psfs,
+    size_t padded_width, size_t padded_height, bool use_fft_convolution) {
+  const ssize_t width = image.Width();
+  const ssize_t height = image.Height();
+
+  assert(components_per_psf.size() == psfs.size());
+
+  size_t component_count = 0;
+  for (const std::vector<std::pair<size_t, size_t>>& components :
+       components_per_psf) {
+    component_count += components.size();
+  }
+
+  aocommon::UVector<float> model_step(component_count);
+  aocommon::UVector<float> model_values(component_count, 0.0);
+  Image derivative_image(image.Width(), image.Height());
+  Image residual_image;
+  Image scratch;
+
+  // The 10 is somewhat arbitrarily chosen; using multi-psfs seems to
+  // slow down convergence a bit over the single-psf implementation
+  // (which uses 4 iterations), but 10 seems more than enough. Further
+  // optimization might be possible.
+  constexpr size_t kNIterations = 10;
+  for (size_t iteration = 0; iteration != kNIterations; ++iteration) {
+    // Calculate residual = dirty - model (x) psf
+    residual_image = image;
+    if (iteration != 0) {
+      size_t parameter = 0;
+      for (size_t psf_index = 0; psf_index != psfs.size(); ++psf_index) {
+        const std::vector<std::pair<size_t, size_t>>& components =
+            components_per_psf[psf_index];
+        ConvolveModel<true>(residual_image, components, psfs[psf_index],
+                            &model_values[parameter], scratch, padded_width,
+                            padded_height, use_fft_convolution);
+        parameter += components.size();
+      }
+    }
+    Logger::Info << "Residual rms: " << residual_image.RMS() << '\n';
+
+    size_t parameter = 0;
+    derivative_image = 0.0f;
+    for (size_t psf_index = 0; psf_index != psfs.size(); ++psf_index) {
+      const std::vector<std::pair<size_t, size_t>>& components =
+          components_per_psf[psf_index];
+      const Image& psf = psfs[psf_index];
+      // Calculate the derivative of the cost-function for each parameter:
+      // derivative[param_index] = residual (x) psf [x,y]
+      CalculateDerivatives(&model_step[parameter], components, residual_image,
+                           psf, padded_width, padded_height,
+                           use_fft_convolution);
+
+      // Calculate the contribution to the "direction image": the derivatives
+      // convolved by the psf.
+      ConvolveModel<false>(derivative_image, components, psfs[psf_index],
+                           &model_step[parameter], scratch, padded_width,
+                           padded_height, use_fft_convolution);
+
+      parameter += components.size();
+    }
+
+    ApplyLineSearch(model_values, residual_image, derivative_image, model_step);
+  }
+
+  std::vector<aocommon::Image> result(components_per_psf.size(),
+                                      Image(width, height, 0.0f));
+  size_t parameter = 0;
+  for (size_t psf_index = 0; psf_index != psfs.size(); ++psf_index) {
+    const std::vector<std::pair<size_t, size_t>>& components =
+        components_per_psf[psf_index];
+    AddToModelImage(result[psf_index], components, &model_values[parameter]);
+    parameter += components.size();
+  }
+  return result;
 }
 
 }  // namespace radler::math

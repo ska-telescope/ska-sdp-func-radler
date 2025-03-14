@@ -1,5 +1,5 @@
-#ifndef RADLER_UTILS_PIXEL_FITTER_H_
-#define RADLER_UTILS_PIXEL_FITTER_H_
+#ifndef RADLER_UTILS_COMPONENT_OPTIMIZATION_H_
+#define RADLER_UTILS_COMPONENT_OPTIMIZATION_H_
 
 #include <cstring>
 #include <utility>
@@ -56,6 +56,22 @@ aocommon::Image GradientDescent(
 void GradientDescent(aocommon::Image& model, const aocommon::Image& image,
                      const aocommon::Image& psf, size_t padded_width,
                      size_t padded_height, bool use_fft_convolution);
+
+/**
+ * Like @ref GradientDescent(), but allows simultaneously solving with different
+ * psfs. This can be used to optimize a set of multi-scale components, where
+ * each scale has its own psf.
+ * @param components_per_psf For each psf, a list of x, y positions that specify
+ * pixels to be fitted. A single x, y position might be in multiple scales (in
+ * that case, the best fitting PSF should receive most of the power).
+ * @returns A list of images with the values of the fitted component. The
+ * returned image with index i corresponds with psfs[i].
+ */
+std::vector<aocommon::Image> GradientDescentWithVariablePsf(
+    const std::vector<std::vector<std::pair<size_t, size_t>>>&
+        components_per_psf,
+    const aocommon::Image& image, const std::vector<aocommon::Image>& psfs,
+    size_t padded_width, size_t padded_height, bool use_fft_convolution);
 
 }  // namespace radler::math
 
