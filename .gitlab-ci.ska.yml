@@ -3,6 +3,10 @@
 # This file contains the pipelines that run on the SKA repository of Radler,
 # which is at https://gitlab.com/ska-telescope/sdp/ska-sdp-func-radler
 
+default:
+  tags:
+    - ska-default
+
 .dind-requester:
   services:
     - docker:20.10-dind
