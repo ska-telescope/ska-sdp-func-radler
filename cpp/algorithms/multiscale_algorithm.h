@@ -25,7 +25,6 @@ class MultiScaleAlgorithm final : public DeconvolutionAlgorithm {
                       bool trackComponents);
   ~MultiScaleAlgorithm();
 
-  // TODO(AST-912) Make copy/move operations Google Style compliant.
   MultiScaleAlgorithm(const MultiScaleAlgorithm&) = default;
   MultiScaleAlgorithm(MultiScaleAlgorithm&&) = delete;
   MultiScaleAlgorithm& operator=(const MultiScaleAlgorithm&) = delete;
@@ -101,6 +100,19 @@ class MultiScaleAlgorithm final : public DeconvolutionAlgorithm {
 
   void FindPeakDirect(const aocommon::Image& image, aocommon::Image& scratch,
                       size_t scale_index);
+  void RunScaleIndepedentComponentOptimization(
+      ImageSet& residual_set, ImageSet& model_set,
+      const std::vector<aocommon::Image>& psfs) const;
+  void RunSingleScaleComponentFitter(ImageSet& residual_set,
+                                     ImageSet& model_set,
+                                     const std::vector<aocommon::Image>& psfs,
+                                     size_t image_index,
+                                     size_t scale_index) const;
+  void RunFullComponentFitter(ImageSet& residual_set, ImageSet& model_set,
+                              const std::vector<aocommon::Image>& psfs) const;
+  void RunFullComponentFitter(ImageSet& residual_set, ImageSet& model_set,
+                              const std::vector<aocommon::Image>& psfs,
+                              size_t image_index) const;
 };
 
 /**

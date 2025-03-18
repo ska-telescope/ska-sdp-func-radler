@@ -100,6 +100,34 @@ enum class MultiscaleShape {
   kGaussianShape
 };
 
+enum class OptimizationAlgorithm {
+  /**
+   * Performs the normal masked cleaning procedure when the auto-mask threshold
+   * is reached.
+   */
+  kClean,
+  /**
+   * Use a linear equation solver. This causes the equation to be solved using
+   * a matrix decomposition algorithm, like singular value decomposition. This
+   * implies that it is exact, but very slow. This optimization makes sure that
+   * the residual flux density values are zero at the place of components.
+   */
+  kLinearEquationSolver,
+  /**
+   * Iteratively performs a line search algorithm in the gradient descent
+   * direction, thereby optimizing the component values to minimize the RMS of
+   * the residual. Because the gradient and residuals can be calculated using
+   * convolutions, this algorithm is very fast and independent of the number of
+   * fitted components. When using multiscale, this requires storing the source
+   * list.
+   */
+  kGradientDescent,
+  /**
+   * Similar to gradient descent, but adds a penalty term to the component
+   * values.
+   */
+  kRegularizedGradientDescent
+};
 /// Class to collect and set (Radler) deconvolution related settings.
 struct Settings {
   /// Trimmed image width.
@@ -335,6 +363,12 @@ struct Settings {
    * If unset/empty, Radler uses: prefix_name + "-horizon-mask.fits".
    */
   std::string horizon_mask_filename;
+  /**
+   * Algorithm used to optimize the value of the found
+   * components, in order to minimize the residuals.
+   */
+  OptimizationAlgorithm component_optimization_algorithm =
+      OptimizationAlgorithm::kClean;
 
   /**
    * Settings related to cleaning relative to a local RMS value.

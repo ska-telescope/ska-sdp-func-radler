@@ -8,10 +8,14 @@
 #include <aocommon/image.h>
 #include <aocommon/logger.h>
 #include <aocommon/optionalnumber.h>
+#include <aocommon/uvector.h>
 #include <aocommon/units/fluxdensity.h>
+
+#include <schaapcommon/math/paddedconvolution.h>
 
 #include "component_list.h"
 #include "algorithms/subminor_loop.h"
+#include "math/component_optimization.h"
 #include "math/peak_finder.h"
 #include "multiscale/multiscale_transforms.h"
 #include "utils/fft_size_calculations.h"
@@ -233,6 +237,12 @@ DeconvolutionResult MultiScaleAlgorithm::ExecuteMajorIteration(
   if (!RmsFactorImage().Empty() && (RmsFactorImage().Width() != width ||
                                     RmsFactorImage().Height() != height)) {
     throw std::runtime_error("Error in RMS factor image dimensions!");
+  }
+
+  if (ComponentOptimizationAlgorithm() != OptimizationAlgorithm::kClean) {
+    RunFullComponentFitter(data_image, model_image, psf_images);
+    DeconvolutionResult result;
+    return result;
   }
 
   bool hasHitThresholdInSubLoop = false;
@@ -735,6 +745,188 @@ void MultiScaleAlgorithm::FindPeakDirect(const aocommon::Image& image,
     scaleInfo.max_unnormalized_image_value = 0.0;
     scaleInfo.max_normalized_image_value = 0.0;
   }
+}
+
+void MultiScaleAlgorithm::RunSingleScaleComponentFitter(
+    ImageSet& residual_set, ImageSet& model_set,
+    const std::vector<aocommon::Image>& psfs, size_t image_index,
+    size_t scale_index) const {
+  const size_t width = residual_set.Width();
+  const size_t height = residual_set.Height();
+  Image scratch(width, height);
+
+  // Create double-convolved PSF & individually convolved images
+  multiscale::MultiScaleTransforms ms_transforms(width, height,
+                                                 settings_.shape);
+  const double scale = scale_infos_[scale_index].scale;
+  const Image& psf = psfs[residual_set.PsfIndex(image_index)];
+  Image single_psf = psf;
+  ms_transforms.Transform(single_psf, scratch, scale);
+  Image double_psf = single_psf;
+  ms_transforms.Transform(double_psf, scratch, scale);
+  Image convolved_residual = residual_set[image_index];
+  ms_transforms.Transform(convolved_residual, scratch, scale);
+
+  const size_t n_components = component_list_->ComponentCount(scale_index);
+  std::vector<std::pair<size_t, size_t>> list;
+  for (size_t i = 0; i != n_components; ++i) {
+    list.emplace_back(component_list_->GetComponentPosition(scale_index, i));
+  }
+
+  const size_t padded_width =
+      utils::GetConvolutionSize(scale, width, settings_.convolution_padding);
+  const size_t padded_height =
+      utils::GetConvolutionSize(scale, height, settings_.convolution_padding);
+
+  aocommon::Image delta;
+  switch (ComponentOptimizationAlgorithm()) {
+    case OptimizationAlgorithm::kLinearEquationSolver:
+      delta = math::LinearComponentSolve(list, convolved_residual, double_psf);
+      break;
+    case OptimizationAlgorithm::kGradientDescent:
+      delta = math::GradientDescent(list, convolved_residual, double_psf,
+                                    padded_width, padded_height, true);
+      break;
+    case OptimizationAlgorithm::kRegularizedGradientDescent:
+      throw std::runtime_error(
+          "Regularized gradient descent has not yet been implemented");
+    default:
+      throw std::runtime_error(
+          "Unsupported optimization algorithm for multiscale clean algorithm");
+      break;
+  }
+
+  for (size_t i = 0; i != n_components; ++i) {
+    const std::pair<size_t, size_t>& position =
+        component_list_->GetComponentPosition(scale_index, i);
+    const float value = delta.Value(position.first, position.second);
+    component_list_->GetSingleValue(scale_index, i, image_index) += value;
+  }
+
+  ms_transforms.Transform(delta, scratch, scale);
+  aocommon::Image& model = model_set[image_index];
+  model += delta;
+
+  schaapcommon::math::PaddedConvolution(delta, psf, padded_width,
+                                        padded_height);
+  Image& residual = residual_set[image_index];
+  residual -= delta;
+
+  Logger::Info << "Finished optimization of scale " << scale_index
+               << ", RMS now " << residual.RMS() << '\n';
+}
+
+void MultiScaleAlgorithm::RunScaleIndepedentComponentOptimization(
+    ImageSet& residual_set, ImageSet& model_set,
+    const std::vector<aocommon::Image>& psfs) const {
+  const size_t n_scales = scale_infos_.size();
+  for (size_t repeat = 0; repeat != 2; ++repeat) {
+    for (size_t scale_index = 0; scale_index != n_scales; ++scale_index) {
+      for (size_t image_index = 0; image_index != residual_set.Size();
+           ++image_index) {
+        RunSingleScaleComponentFitter(residual_set, model_set, psfs,
+                                      image_index, scale_index);
+      }
+    }
+  }
+
+  Logger::Info << "Applying spectral constraints...\n";
+  ApplySpectralConstraintsToComponents(*component_list_);
+}
+
+void MultiScaleAlgorithm::RunFullComponentFitter(
+    ImageSet& residual_set, ImageSet& model_set,
+    const std::vector<aocommon::Image>& psfs, size_t image_index) const {
+  const size_t width = residual_set.Width();
+  const size_t height = residual_set.Height();
+  Image scratch(width, height);
+
+  // Create convolved PSF
+  Logger::Info << "Making convolved psfs...\n";
+  multiscale::MultiScaleTransforms ms_transforms(width, height,
+                                                 settings_.shape);
+  const aocommon::Image& psf = psfs[residual_set.PsfIndex(image_index)];
+  std::vector<aocommon::Image> convolved_psfs;
+  convolved_psfs.reserve(scale_infos_.size());
+  std::vector<std::vector<std::pair<size_t, size_t>>> list;
+  for (size_t scale_index = 0; scale_index != scale_infos_.size();
+       ++scale_index) {
+    convolved_psfs.emplace_back(psf);
+    ms_transforms.Transform(convolved_psfs.back(), scratch,
+                            scale_infos_[scale_index].scale);
+
+    const size_t n_components = component_list_->ComponentCount(scale_index);
+    std::vector<std::pair<size_t, size_t>>& list_for_scale =
+        list.emplace_back();
+    for (size_t i = 0; i != n_components; ++i) {
+      list_for_scale.emplace_back(
+          component_list_->GetComponentPosition(scale_index, i));
+    }
+  }
+
+  const double max_scale = scale_infos_.back().scale;
+  const size_t padded_width = utils::GetConvolutionSize(
+      max_scale, width, settings_.convolution_padding);
+  const size_t padded_height = utils::GetConvolutionSize(
+      max_scale, height, settings_.convolution_padding);
+
+  Logger::Info << "Running gradient descent algorithm...\n";
+  std::vector<aocommon::Image> delta;
+  switch (ComponentOptimizationAlgorithm()) {
+    case OptimizationAlgorithm::kGradientDescent:
+      delta = math::GradientDescentWithVariablePsf(
+          list, residual_set[image_index], convolved_psfs, padded_width,
+          padded_height, true);
+      break;
+    default:
+      throw std::runtime_error(
+          "Unsupported optimization algorithm for multiscale clean algorithm");
+  }
+
+  aocommon::Image& model = model_set[image_index];
+
+  Logger::Info << "Updating component list...\n";
+  for (size_t scale_index = 0; scale_index != scale_infos_.size();
+       ++scale_index) {
+    const size_t n_components = component_list_->ComponentCount(scale_index);
+    for (size_t i = 0; i != n_components; ++i) {
+      const std::pair<size_t, size_t>& position =
+          component_list_->GetComponentPosition(scale_index, i);
+      const float value = model.Value(position.first, position.second);
+      component_list_->GetSingleValue(scale_index, i, image_index) += value;
+    }
+  }
+
+  Logger::Info << "Updating model...\n";
+  for (size_t scale_index = 0; scale_index != scale_infos_.size();
+       ++scale_index) {
+    ms_transforms.Transform(delta[scale_index], scratch,
+                            scale_infos_[scale_index].scale);
+    model += delta[scale_index];
+  }
+
+  Logger::Info << "Updating residual...\n";
+  Image& residual = residual_set[image_index];
+  for (size_t scale_index = 0; scale_index != scale_infos_.size();
+       ++scale_index) {
+    schaapcommon::math::PaddedConvolution(delta[scale_index], psf, padded_width,
+                                          padded_height);
+    residual -= delta[scale_index];
+  }
+
+  Logger::Info << "Finished optimization, RMS now " << residual.RMS() << '\n';
+}
+
+void MultiScaleAlgorithm::RunFullComponentFitter(
+    ImageSet& residual_set, ImageSet& model_set,
+    const std::vector<aocommon::Image>& psfs) const {
+  for (size_t image_index = 0; image_index != residual_set.Size();
+       ++image_index) {
+    RunFullComponentFitter(residual_set, model_set, psfs, image_index);
+  }
+
+  Logger::Info << "Applying spectral constraints...\n";
+  ApplySpectralConstraintsToComponents(*component_list_);
 }
 
 }  // namespace radler::algorithms

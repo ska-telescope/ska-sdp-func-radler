@@ -3,6 +3,7 @@
 #ifndef RADLER_COMPONENT_LIST_H_
 #define RADLER_COMPONENT_LIST_H_
 
+#include <algorithm>
 #include <vector>
 
 #include <aocommon/image.h>
@@ -133,15 +134,41 @@ class ComponentList {
     return list_per_scale_[scale_index].positions.size();
   }
 
-  void GetComponent(size_t scale_index, size_t index, size_t& x, size_t& y,
-                    float* values) const {
+  void GetComponent(size_t scale_index, size_t component_index, size_t& x,
+                    size_t& y, float* values) const {
+    assert(scale_index < list_per_scale_.size());
+    assert(component_index < list_per_scale_[scale_index].positions.size());
+    x = list_per_scale_[scale_index].positions[component_index].x;
+    y = list_per_scale_[scale_index].positions[component_index].y;
+    for (size_t f = 0; f != n_frequencies_; ++f)
+      values[f] = list_per_scale_[scale_index]
+                      .values[component_index * n_frequencies_ + f];
+  }
+
+  float& GetSingleValue(size_t scale_index, size_t component_index,
+                        size_t channel_index) {
+    assert(scale_index < list_per_scale_.size());
+    assert(component_index < list_per_scale_[scale_index].positions.size());
+    assert(channel_index < n_frequencies_);
+    return list_per_scale_[scale_index]
+        .values[component_index * n_frequencies_ + channel_index];
+  }
+
+  void SetValues(size_t scale_index, size_t component_index,
+                 const float* values) {
+    assert(scale_index < list_per_scale_.size());
+    assert(component_index < list_per_scale_[scale_index].positions.size());
+    float* start =
+        &list_per_scale_[scale_index].values[component_index * n_frequencies_];
+    std::copy_n(values, n_frequencies_, start);
+  }
+
+  std::pair<size_t, size_t> GetComponentPosition(size_t scale_index,
+                                                 size_t index) const {
     assert(scale_index < list_per_scale_.size());
     assert(index < list_per_scale_[scale_index].positions.size());
-    x = list_per_scale_[scale_index].positions[index].x;
-    y = list_per_scale_[scale_index].positions[index].y;
-    for (size_t f = 0; f != n_frequencies_; ++f)
-      values[f] =
-          list_per_scale_[scale_index].values[index * n_frequencies_ + f];
+    return std::pair(list_per_scale_[scale_index].positions[index].x,
+                     list_per_scale_[scale_index].positions[index].y);
   }
 
   /**

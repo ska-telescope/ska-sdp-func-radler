@@ -92,6 +92,31 @@ function that scales with alpha and normalized. This is the function
 used by Cornwell (2008). It can't be used when saving source lists,
 because it is not a fundamental shape allowed in sky models.)doc";
 
+static const char *__doc_radler_OptimizationAlgorithm = R"doc()doc";
+
+static const char *__doc_radler_OptimizationAlgorithm_kClean =
+R"doc(Performs the normal masked cleaning procedure when the auto-mask
+threshold is reached.)doc";
+
+static const char *__doc_radler_OptimizationAlgorithm_kGradientDescent =
+R"doc(Iteratively performs a line search algorithm in the gradient descent
+direction, thereby optimizing the component values to minimize the RMS
+of the residual. Because the gradient and residuals can be calculated
+using convolutions, this algorithm is very fast and independent of the
+number of fitted components. When using multiscale, this requires
+storing the source list.)doc";
+
+static const char *__doc_radler_OptimizationAlgorithm_kLinearEquationSolver =
+R"doc(Use a linear equation solver. This causes the equation to be solved
+using a matrix decomposition algorithm, like singular value
+decomposition. This implies that it is exact, but very slow. This
+optimization makes sure that the residual flux density values are zero
+at the place of components.)doc";
+
+static const char *__doc_radler_OptimizationAlgorithm_kRegularizedGradientDescent =
+R"doc(Similar to gradient descent, but adds a penalty term to the component
+values.)doc";
+
 static const char *__doc_radler_Settings = R"doc(Class to collect and set (Radler) deconvolution related settings.)doc";
 
 static const char *__doc_radler_Settings_Generic = R"doc(Settings not specific to the algorithm)doc";
@@ -282,6 +307,10 @@ than the number of channels used during deconvolution (see the
 constructor of WorkTable). If that's the case, channels are
 interpolated before deconvolution and extrapolated after (using the
 spectral_fitting settings).)doc";
+
+static const char *__doc_radler_Settings_component_optimization_algorithm =
+R"doc(Algorithm used to optimize the value of the found components, in order
+to minimize the residuals.)doc";
 
 static const char *__doc_radler_Settings_divergence_limit =
 R"doc(If in one major iteration the peak raises by this factor, the

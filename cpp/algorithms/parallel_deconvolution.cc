@@ -264,6 +264,12 @@ void ParallelDeconvolution::SetAutoMaskMode(bool track_per_scale_masks,
   }
 }
 
+void ParallelDeconvolution::SetComponentOptimization(
+    OptimizationAlgorithm algorithm) {
+  for (auto& alg : algorithms_)
+    alg->SetComponentOptimizationAlgorithm(algorithm);
+}
+
 void ParallelDeconvolution::SetCleanMask(const bool* mask) {
   if (algorithms_.size() == 1) {
     algorithms_.front()->SetCleanMask(mask);

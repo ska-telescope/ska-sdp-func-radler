@@ -8,6 +8,7 @@
 
 #include "algorithms/subminor_loop.h"
 #include "algorithms/threaded_deconvolution_tools.h"
+#include "math/component_optimization.h"
 #include "math/peak_finder.h"
 
 using aocommon::OptionalNumber;
@@ -21,6 +22,30 @@ std::string peakDescription(const aocommon::Image& image, size_t x, size_t y) {
   const float peak = image[index];
   str << FluxDensity::ToNiceString(peak) << " at " << x << "," << y;
   return str.str();
+}
+void RunComponentOptimization(ImageSet& residual_set, ImageSet& model_set,
+                              const std::vector<aocommon::Image>& psfs,
+                              OptimizationAlgorithm algorithm) {
+  for (size_t i = 0; i != residual_set.Size(); ++i) {
+    aocommon::Image& residual = residual_set[i];
+    aocommon::Image& model = model_set[i];
+    const aocommon::Image psf = psfs[residual_set.PsfIndex(i)];
+    switch (algorithm) {
+      case OptimizationAlgorithm::kLinearEquationSolver:
+        math::LinearComponentSolve(model, residual, psf);
+        break;
+      case OptimizationAlgorithm::kGradientDescent:
+        math::GradientDescent(model, residual, psf, model.Width() * 2,
+                              model.Height() * 2, true);
+        break;
+      case OptimizationAlgorithm::kRegularizedGradientDescent:
+        throw std::runtime_error(
+            "Regularized gradient descent has not yet been implemented");
+      default:
+        throw std::runtime_error(
+            "Unsupported optimization algorithm for generic clean algorithm");
+    }
+  }
 }
 }  // namespace
 
@@ -49,18 +74,22 @@ DeconvolutionResult GenericClean::ExecuteMajorIteration(
   OptionalNumber<float> maxValue =
       FindPeak(integrated, scratchA.Data(), componentX, componentY);
   DeconvolutionResult result;
+  result.final_peak_value = *maxValue;
   if (!maxValue) {
     LogReceiver().Info << "No peak found.\n";
-    result.another_iteration_required = false;
     return result;
   }
   if (IterationNumber() >= MaxIterations()) {
     // If there are no iterations left, we can immediately return. This is
     // particularly useful in combination with parallel deconvolution,
     // because it will do a call with 0 max iterations to get the peak.
-    result.another_iteration_required = false;
-    result.final_peak_value = *maxValue;
-    result.is_diverging = false;
+    return result;
+  }
+  if (ComponentOptimizationAlgorithm() != OptimizationAlgorithm::kClean) {
+    LogReceiver().Info << "Running optimization algorithm...\n";
+    RunComponentOptimization(dirty_set, model_set, psfs,
+                             ComponentOptimizationAlgorithm());
+    FitSpectra(model_set);
     return result;
   }
   LogReceiver().Info << "Initial peak: "
@@ -243,6 +272,26 @@ OptionalNumber<float> GenericClean::FindPeak(const aocommon::Image& image,
         actual_image, image.Width(), image.Height(), x, y,
         AllowNegativeComponents(), 0, image.Height(), CleanMask(),
         CleanBorderRatio());
+  }
+}
+void GenericClean::FitSpectra(ImageSet& model_set) const {
+  aocommon::UVector<float> values(model_set.Size());
+  const size_t width = model_set.Width();
+  const size_t height = model_set.Height();
+  size_t pixel_index = 0;
+  for (size_t y = 0; y != height; ++y) {
+    for (size_t x = 0; x != width; ++x) {
+      for (size_t image_index = 0; image_index != model_set.Size();
+           ++image_index) {
+        values[image_index] = model_set[image_index][pixel_index];
+      }
+      PerformSpectralFit(values.data(), x, y);
+      for (size_t image_index = 0; image_index != model_set.Size();
+           ++image_index) {
+        model_set[image_index][pixel_index] = values[image_index];
+      }
+      ++pixel_index;
+    }
   }
 }
 }  // namespace radler::algorithms

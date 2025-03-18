@@ -20,7 +20,6 @@ namespace radler::algorithms {
 class GenericClean final : public DeconvolutionAlgorithm {
  public:
   explicit GenericClean(bool use_sub_minor_optimization);
-  // TODO(AST-912) Make copy/move operations Google Style compliant.
   GenericClean(const GenericClean&) = default;
   GenericClean(GenericClean&&) = delete;
   GenericClean& operator=(const GenericClean&) = delete;
@@ -45,6 +44,7 @@ class GenericClean final : public DeconvolutionAlgorithm {
   aocommon::OptionalNumber<float> FindPeak(const aocommon::Image& image,
                                            float* scratch_buffer, size_t& x,
                                            size_t& y);
+  void FitSpectra(ImageSet& model_set) const;
 };
 }  // namespace radler::algorithms
 #endif

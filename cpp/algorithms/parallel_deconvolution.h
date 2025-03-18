@@ -70,6 +70,8 @@ class ParallelDeconvolution {
    */
   void SetAutoMaskMode(bool track_per_scale_masks, bool use_per_scale_masks);
 
+  void SetComponentOptimization(OptimizationAlgorithm algorithm);
+
   void SetCleanMask(const bool* mask);
 
   void SetSpectrallyForcedImages(std::vector<aocommon::Image>&& images);

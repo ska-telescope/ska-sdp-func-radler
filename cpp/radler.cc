@@ -173,6 +173,12 @@ void Radler::Perform(bool& perform_another_iteration,
     // When we are in the second phase of automasking, don't use
     // the RMS background anymore
     parallel_deconvolution_->SetRmsFactorImage(Image());
+    // Component optimization is only performed after the mask is complete
+    if (settings_.component_optimization_algorithm !=
+        OptimizationAlgorithm::kClean) {
+      parallel_deconvolution_->SetComponentOptimization(
+          settings_.component_optimization_algorithm);
+    }
   } else {
     Image rms_image;
     if (!settings_.local_rms.image.empty()) {

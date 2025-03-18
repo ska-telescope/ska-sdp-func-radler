@@ -15,8 +15,13 @@
 #include <schaapcommon/fitters/spectralfitter.h>
 
 #include "image_set.h"
+#include "settings.h"
 
-namespace radler::algorithms {
+namespace radler {
+
+class ComponentList;
+
+namespace algorithms {
 
 /**
  * Class to capture information returned by
@@ -103,6 +108,10 @@ class DeconvolutionAlgorithm {
     log_receiver_ = &log_receiver;
   }
 
+  void SetComponentOptimizationAlgorithm(OptimizationAlgorithm algorithm) {
+    settings_.component_optimization_algorithm = algorithm;
+  }
+
   size_t MaxIterations() const { return settings_.max_iterations; }
   float Threshold() const { return settings_.threshold; }
   float MajorIterationThreshold() const {
@@ -116,6 +125,9 @@ class DeconvolutionAlgorithm {
   }
   bool StopOnNegativeComponents() const {
     return settings_.stop_on_negative_component;
+  }
+  OptimizationAlgorithm ComponentOptimizationAlgorithm() const {
+    return settings_.component_optimization_algorithm;
   }
   const bool* CleanMask() const { return settings_.clean_mask; }
 
@@ -155,7 +167,9 @@ class DeconvolutionAlgorithm {
    * @param values is an array the size of the ImageSet (so npolarizations x
    * nchannels).
    */
-  void PerformSpectralFit(float* values, size_t x, size_t y);
+  void PerformSpectralFit(float* values, size_t x, size_t y) const;
+
+  void ApplySpectralConstraintsToComponents(ComponentList& list) const;
 
  protected:
   DeconvolutionAlgorithm();
@@ -176,16 +190,19 @@ class DeconvolutionAlgorithm {
     float divergence_limit = 4.0;
     bool allow_negative_components = true;
     bool stop_on_negative_component = false;
+    OptimizationAlgorithm component_optimization_algorithm =
+        OptimizationAlgorithm::kClean;
     const bool* clean_mask = nullptr;
   } settings_;
 
   aocommon::LogReceiver* log_receiver_ = nullptr;
-  std::vector<float> fitting_scratch_;
+  mutable std::vector<float> fitting_scratch_;
   std::unique_ptr<schaapcommon::fitters::SpectralFitter> spectral_fitter_;
   aocommon::Image rms_factor_image_;
   size_t iteration_number_ = 0;
   size_t n_polarizations_ = 1;
 };
 
-}  // namespace radler::algorithms
+}  // namespace algorithms
+}  // namespace radler
 #endif  // RADLER_ALGORITHMS_DECONVOLUTION_ALGORITHM_H_

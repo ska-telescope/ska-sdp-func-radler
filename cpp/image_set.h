@@ -187,6 +187,7 @@ class ImageSet {
   const aocommon::Image& operator[](size_t index) const {
     return images_[index];
   }
+  aocommon::Image& operator[](size_t index) { return images_[index]; }
 
   /**
    * Create a non-owning view of an image
