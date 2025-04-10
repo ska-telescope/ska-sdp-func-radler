@@ -170,6 +170,10 @@ void Radler::Perform(bool& perform_another_iteration,
   const bool auto_mask_is_enabled =
       settings_.auto_mask_sigma || settings_.absolute_auto_mask_threshold;
   if (auto_mask_is_enabled && auto_mask_is_finished_) {
+    // Once the auto-mask is used, a more aggressive gain value can be used.
+    // This decreases the number of required minor iterations a bit.
+    parallel_deconvolution_->SetMinorLoopGain(
+        std::min(1.0, settings_.minor_loop_gain * 2.0));
     // When we are in the second phase of automasking, don't use
     // the RMS background anymore
     parallel_deconvolution_->SetRmsFactorImage(Image());
@@ -180,6 +184,7 @@ void Radler::Perform(bool& perform_another_iteration,
           settings_.component_optimization_algorithm);
     }
   } else {
+    parallel_deconvolution_->SetMinorLoopGain(settings_.minor_loop_gain);
     Image rms_image;
     if (!settings_.local_rms.image.empty()) {
       rms_image = Image(image_width_, image_height_);
@@ -212,6 +217,8 @@ void Radler::Perform(bool& perform_another_iteration,
     }
   }
 
+  integrated.Reset();
+
   // When using squared joins, the stddev is not appropriate as a threshold,
   // because the whole image will have a positive mean(/median). It is probably
   // best to unconditionally add the mean, but at this point I didn't want to
@@ -229,7 +236,6 @@ void Radler::Perform(bool& perform_another_iteration,
         std::max(stddev * (*settings_.auto_threshold_sigma) + threshold_bias,
                  settings_.absolute_threshold));
   }
-  integrated.Reset();
 
   Logger::Debug << "Loading PSFs...\n";
   const std::vector<std::vector<aocommon::Image>> psf_images =

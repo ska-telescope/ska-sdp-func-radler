@@ -253,6 +253,10 @@ void ParallelDeconvolution::SetThreshold(double threshold) {
   for (auto& alg : algorithms_) alg->SetThreshold(threshold);
 }
 
+void ParallelDeconvolution::SetMinorLoopGain(double gain) {
+  for (auto& alg : algorithms_) alg->SetMinorLoopGain(gain);
+}
+
 void ParallelDeconvolution::SetAutoMaskMode(bool track_per_scale_masks,
                                             bool use_per_scale_masks) {
   track_per_scale_masks_ = track_per_scale_masks;

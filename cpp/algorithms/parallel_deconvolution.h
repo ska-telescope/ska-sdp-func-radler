@@ -62,6 +62,8 @@ class ParallelDeconvolution {
 
   void SetThreshold(double threshold);
 
+  void SetMinorLoopGain(double gain);
+
   bool IsInitialized() const { return !algorithms_.empty(); }
 
   /**
