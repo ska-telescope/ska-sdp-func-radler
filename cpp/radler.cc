@@ -127,7 +127,7 @@ const algorithms::DeconvolutionAlgorithm& Radler::MaxScaleCountAlgorithm()
   return parallel_deconvolution_->MaxScaleCountAlgorithm();
 }
 
-void Radler::Perform(bool& perform_another_iteration,
+void Radler::Perform(bool& another_iteration_required,
                      size_t major_iteration_number) {
   /**
    * Because functions like convolution in schaapcommon use parallelized fors,
@@ -267,30 +267,32 @@ void Radler::Perform(bool& perform_another_iteration,
     }
   }
 
-  parallel_deconvolution_->ExecuteMajorIteration(
-      residual_set, model_set, psf_images, table_->PsfOffsets(),
-      perform_another_iteration);
+  const algorithms::ParallelDeconvolutionResult result =
+      parallel_deconvolution_->ExecuteMajorIteration(
+          residual_set, model_set, psf_images, table_->PsfOffsets(),
+          settings_.major_loop_gain);
+  another_iteration_required = result.another_iteration_required;
 
-  if (!perform_another_iteration && auto_mask_is_enabled &&
+  if (!another_iteration_required && auto_mask_is_enabled &&
       !auto_mask_is_finished_) {
     Logger::Info << "Auto-masking threshold reached; continuing next major "
                     "iteration with deeper threshold and mask.\n";
     auto_mask_is_finished_ = true;
-    perform_another_iteration = true;
+    another_iteration_required = true;
     auto_mask_finishing_iteration = major_iteration_number;
   }
 
-  if (perform_another_iteration && settings_.major_iteration_count != 0 &&
+  if (another_iteration_required && settings_.major_iteration_count != 0 &&
       major_iteration_number >= settings_.major_iteration_count) {
-    perform_another_iteration = false;
+    another_iteration_required = false;
     Logger::Info << "Maximum number of major iterations was reached: not "
                     "continuing deconvolution.\n";
   }
 
-  if (perform_another_iteration && auto_mask_is_finished_ &&
+  if (another_iteration_required && auto_mask_is_finished_ &&
       major_iteration_number - auto_mask_finishing_iteration >=
           settings_.major_auto_mask_iteration_count) {
-    perform_another_iteration = false;
+    another_iteration_required = false;
     Logger::Info << "Performed "
                  << major_iteration_number - auto_mask_finishing_iteration
                  << " major iterations after reaching the auto-mask threshold. "
@@ -299,10 +301,10 @@ void Radler::Perform(bool& perform_another_iteration,
                  << ": not continuing deconvolution.\n";
   }
 
-  if (perform_another_iteration && settings_.minor_iteration_count != 0 &&
+  if (another_iteration_required && settings_.minor_iteration_count != 0 &&
       parallel_deconvolution_->FirstAlgorithm().IterationNumber() >=
           settings_.minor_iteration_count) {
-    perform_another_iteration = false;
+    another_iteration_required = false;
     Logger::Info
         << "Maximum number of minor deconvolution iterations was reached: not "
            "continuing deconvolution.\n";

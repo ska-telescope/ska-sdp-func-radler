@@ -494,23 +494,23 @@ void ParallelDeconvolution::RunSubImage(
   }
 }
 
-void ParallelDeconvolution::ExecuteMajorIteration(
+ParallelDeconvolutionResult ParallelDeconvolution::ExecuteMajorIteration(
     ImageSet& data_image, ImageSet& model_image,
     const std::vector<std::vector<aocommon::Image>>& psf_images,
-    const std::vector<PsfOffset>& psf_offsets, bool& reached_major_threshold) {
+    const std::vector<PsfOffset>& psf_offsets, double major_loop_gain) {
   if (algorithms_.size() == 1) {
-    ExecuteSingleThreadedRun(data_image, model_image, psf_images, psf_offsets,
-                             reached_major_threshold);
+    return ExecuteSingleThreadedRun(data_image, model_image, psf_images,
+                                    psf_offsets, major_loop_gain);
   } else {
-    ExecuteParallelRun(data_image, model_image, psf_images, psf_offsets,
-                       reached_major_threshold);
+    return ExecuteParallelRun(data_image, model_image, psf_images, psf_offsets,
+                              major_loop_gain);
   }
 }
 
-void ParallelDeconvolution::ExecuteSingleThreadedRun(
+ParallelDeconvolutionResult ParallelDeconvolution::ExecuteSingleThreadedRun(
     ImageSet& data_image, ImageSet& model_image,
     const std::vector<std::vector<aocommon::Image>>& psf_images,
-    const std::vector<PsfOffset>& psf_offsets, bool& reached_major_threshold) {
+    const std::vector<PsfOffset>& psf_offsets, double major_loop_gain) {
   DeconvolutionAlgorithm& algorithm = *algorithms_.front();
 
   // The index of the nearest direction-dependent PSF, or the first when no
@@ -527,10 +527,11 @@ void ParallelDeconvolution::ExecuteSingleThreadedRun(
   const bool resize_psfs = first_psf_image.Width() != data_image.Width() ||
                            first_psf_image.Height() != data_image.Height();
 
+  algorithm.SetMajorLoopGain(major_loop_gain);
+  DeconvolutionResult result;
   if (!resize_psfs) {
-    const DeconvolutionResult result = algorithm.ExecuteMajorIteration(
-        data_image, model_image, psf_images[psf_image_index]);
-    reached_major_threshold = result.another_iteration_required;
+    result = algorithm.ExecuteMajorIteration(data_image, model_image,
+                                             psf_images[psf_image_index]);
   } else {
     // When using direction-dependent PSFs, the PSFs can only be smaller.
     assert(first_psf_image.Width() <= data_image.Width());
@@ -541,16 +542,20 @@ void ParallelDeconvolution::ExecuteSingleThreadedRun(
       resized_psf_images.push_back(
           psf_image.Untrim(data_image.Width(), data_image.Height()));
     }
-    const DeconvolutionResult result = algorithm.ExecuteMajorIteration(
-        data_image, model_image, resized_psf_images);
-    reached_major_threshold = result.another_iteration_required;
+    result = algorithm.ExecuteMajorIteration(data_image, model_image,
+                                             resized_psf_images);
   }
+  ParallelDeconvolutionResult global_result;
+  global_result.another_iteration_required = result.another_iteration_required;
+  global_result.start_peak = result.starting_peak_value;
+  global_result.end_peak = result.final_peak_value;
+  return global_result;
 }
 
-void ParallelDeconvolution::ExecuteParallelRun(
+ParallelDeconvolutionResult ParallelDeconvolution::ExecuteParallelRun(
     ImageSet& data_image, ImageSet& model_image,
     const std::vector<std::vector<aocommon::Image>>& psf_images,
-    const std::vector<PsfOffset>& psf_offsets, bool& reached_major_threshold) {
+    const std::vector<PsfOffset>& psf_offsets, double major_loop_gain) {
   const size_t width = data_image.Width();
   const size_t height = data_image.Height();
 
@@ -584,17 +589,18 @@ void ParallelDeconvolution::ExecuteParallelRun(
     logs_[index].Info << "Sub-image " << index << " returned peak position.\n";
     logs_[index].Mute(true);
   });
-  double maxValue = 0.0;
+  double start_peak_value = 0.0;
   size_t indexOfMax = 0;
   for (const SubImage& img : subImages) {
-    if (img.peak > maxValue) {
-      maxValue = img.peak;
+    if (img.peak > start_peak_value) {
+      start_peak_value = img.peak;
       indexOfMax = img.index;
     }
   }
   Logger::Info << "Subimage " << (indexOfMax + 1) << " has maximum peak of "
-               << aocommon::units::FluxDensity::ToNiceString(maxValue) << ".\n";
-  double mIterThreshold = maxValue * (1.0 - settings_.major_loop_gain);
+               << aocommon::units::FluxDensity::ToNiceString(start_peak_value)
+               << ".\n";
+  double mIterThreshold = start_peak_value * (1.0 - major_loop_gain);
 
   // Run the deconvolution
   aocommon::RecursiveFor::NestedRun(0, algorithms_.size(), [&](size_t index) {
@@ -614,7 +620,8 @@ void ParallelDeconvolution::ExecuteParallelRun(
   rms_image_.Reset();
 
   size_t subImagesFinished = 0;
-  reached_major_threshold = false;
+  ParallelDeconvolutionResult global_result;
+  global_result.start_peak = start_peak_value;
   bool reachedMaxNIter = false;
   for (SubImage& img : subImages) {
     if (!img.reached_major_threshold) ++subImagesFinished;
@@ -623,17 +630,26 @@ void ParallelDeconvolution::ExecuteParallelRun(
       reachedMaxNIter = true;
     }
   }
+
+  double end_peak_value = 0.0;
+  for (const SubImage& img : subImages) {
+    end_peak_value = std::max(end_peak_value, img.peak);
+  }
+  global_result.end_peak = end_peak_value;
+
   Logger::Info << subImagesFinished << " / " << subImages.size()
                << " sub-images finished";
-  reached_major_threshold = (subImagesFinished != subImages.size());
-  if (reached_major_threshold && !reachedMaxNIter) {
+  global_result.another_iteration_required =
+      (subImagesFinished != subImages.size());
+  if (global_result.another_iteration_required && !reachedMaxNIter) {
     Logger::Info << ": Continue next major iteration.\n";
-  } else if (reached_major_threshold && reachedMaxNIter) {
+  } else if (global_result.another_iteration_required && reachedMaxNIter) {
     Logger::Info << ", but nr. of iterations reached at least once: "
                     "Deconvolution finished.\n";
-    reached_major_threshold = false;
+    global_result.another_iteration_required = false;
   } else {
     Logger::Info << ": Deconvolution finished.\n";
   }
+  return global_result;
 }
 }  // namespace radler::algorithms

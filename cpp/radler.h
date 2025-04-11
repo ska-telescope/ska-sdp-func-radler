@@ -57,7 +57,7 @@ class Radler {
   const algorithms::DeconvolutionAlgorithm& MaxScaleCountAlgorithm() const;
 
   /**
-   * @param [out] perform_another_iteration on exit, indicates whether another
+   * @param [out] another_iteration_required on exit, indicates whether another
    * major iteration should be run. If @c true, the caller should do a new
    * prediction-gridding iteration to calculate a new residual image, after
    * which the @c Perform() function should be called again. If @c false on
@@ -66,7 +66,7 @@ class Radler {
    * @param major_iteration_number How many major iterations (calls to
    * @c Perform()) were performed so far.
    */
-  void Perform(bool& perform_another_iteration, size_t major_iteration_number);
+  void Perform(bool& another_iteration_required, size_t major_iteration_number);
 
   void FreeDeconvolutionAlgorithms();
 

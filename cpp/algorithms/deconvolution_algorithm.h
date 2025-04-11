@@ -9,6 +9,7 @@
 
 #include <aocommon/image.h>
 #include <aocommon/logger.h>
+#include <aocommon/optionalnumber.h>
 #include <aocommon/polarization.h>
 #include <aocommon/uvector.h>
 
@@ -29,8 +30,13 @@ namespace algorithms {
  */
 struct DeconvolutionResult {
   /**
-   * The peak (in Jy) of the highest residual value, or zero if unknown
-   * or irrelevant.
+   * The peak (in Jy) of the highest residual value at the start of the
+   * processing, or unset if unknown or irrelevant.
+   */
+  aocommon::OptionalNumber<float> starting_peak_value;
+  /**
+   * The peak (in Jy) of the highest residual value after this iteration, or
+   * zero if unknown or irrelevant.
    */
   float final_peak_value = 0.0;
   /**
